@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width">
+  <title>RandoDungo Tactics</title>
+  <style>
+    /* vietnamese */
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+      src: url(font/vt323.woff2) format('woff2');
+      unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+    }
+
+    /* latin-ext */
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+      src: url(font/vt323.woff2) format('woff2');
+      unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+
+    /* latin */
+    @font-face {
+      font-family: 'VT323';
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+      src: url(font/vt323.woff2) format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'VT323';
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      position: relative;
+
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      --border-radius: 8px;
+      --primary-color: #0A0;
+      --accent-color: #AA0;
+      --font-size: 24px;
+      --button-padding: 8px 16px;
+      font-size: var(--font-size);
+    }
+
+    .accent-text {
+      color: var(--primary-color)
+    }
+
+    #opening_screen {
+      height: 100%;
+      position: relative;
+      width: 56.67vh;
+      max-width: 100%;
+      overflow: hidden;
+      background-color: #111;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-auto-rows: min-content;
+      gap: 16px;
+    }
+
+    #heading,
+    #job_button {
+      grid-column: 1 / 3;
+      position: relative;
+    }
+
+    #tactics {
+      position: absolute;
+      font-size: 0.5em;
+      bottom: 0;
+      transform-origin: center;
+      color: var(--accent-color);
+      text-shadow: 0 -1px 2px black;
+      border: 1px solid var(--accent-color);
+      border-radius: var(--border-radius);
+      padding: 0 4px 1px 4px;
+      box-shadow: 0 -1px 2px black;
+      animation: stamp 0.3s cubic-bezier(0, 0.3, 0.5, 1) forwards;
+    }
+
+    @keyframes stamp {
+      0% {
+        transform: rotate(-10deg) translate(-244%, 40vh) scale(5);
+        opacity: 0;
+      }
+
+      60% {
+        transform: rotate(-10deg) translate(-244%, 40vh) scale(5);
+        opacity: 1;
+      }
+
+      100% {
+        transform: rotate(-32deg) translate(-30%, -62%) scale(1)
+      }
+    }
+
+    #avatar-location {
+      grid-row: 2 / 4;
+      display: grid;
+      place-items: center;
+    }
+
+    #heading {
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      color: white;
+    }
+
+    button {
+      background-color: transparent;
+      border-radius: var(--border-radius);
+      border: 1px solid var(--primary-color);
+      color: var(--primary-color);
+      font-size: var(--font-size);
+      padding: var(--button-padding);
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    #name_button {
+      text-transform: initial;
+    }
+
+    #crew_button {
+      padding: 32px 16px;
+    }
+
+    #avatar_button {
+      aspect-ratio: 1 / 1;
+      width: 100%;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id='opening_screen'>
+    <h1 id='heading'>Rando<span class='accent-text'>Dungo</span><span id='tactics'>Tactics</span></h1>
+    <div id="avatar-location"><button id='avatar_button'><img id='avatar' src=''></button></div>
+    <button id='name_button'>name</button>
+    <button id='crew_button'>crew</button>
+    <button id='job_button'>take a job</button>
+  </div>
+</body>
+
+</html>
