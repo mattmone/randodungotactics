@@ -80,7 +80,7 @@
     }
 
     #heading,
-    #job_button {
+    #jobButton {
       grid-column: 1 / 3;
       position: relative;
     }
@@ -139,30 +139,33 @@
       text-transform: uppercase;
     }
 
-    #name_button {
+    #nameButton {
       text-transform: initial;
     }
 
-    #crew_button {
+    #crewButton {
       padding: 32px 16px;
     }
 
-    #avatar_button {
+    #avatarButton {
       aspect-ratio: 1 / 1;
       width: 100%;
       padding: 0;
     }
   </style>
+  <script type='module' src='./src/index.js'></script>
 </head>
 
 <body>
   <div id='opening_screen'>
     <h1 id='heading'>Rando<span class='accent-text'>Dungo</span><span id='tactics'>Tactics</span></h1>
-    <div id="avatar-location"><button id='avatar_button'><img id='avatar' src=''></button></div>
-    <button id='name_button'>name</button>
-    <button id='crew_button'>crew</button>
-    <button id='job_button'>take a job</button>
+    <div id="avatar-location"><button id='avatarButton'><img id='avatar' src=''></button></div>
+    <button id='nameButton'>name</button>
+    <button id='crewButton'>crew</button>
+    <button id='jobButton'>take a job</button>
+    <skill-screen></skill-screen>
   </div>
+
 </body>
 
 </html>
