@@ -1,10 +1,11 @@
 const buttons = Object.fromEntries(Array.from(document.querySelectorAll('button')).map(button => [button.id, button]));
 
 buttons.nameButton.addEventListener('click', async () => {
-  await import('./screens/skill-screen.js');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-  document.querySelector('skill-screen').toggleAttribute('open');
-    });
-  })
+  const [{nextFrame}] = await Promise.all([
+    import('./utils/nextFrame.js'),
+    import('./screens/side-screen.js'),
+    import('./screens/character-content.js')
+  ]);
+  await nextFrame();
+  document.querySelector('side-screen').toggleAttribute('open');
 })
