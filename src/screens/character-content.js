@@ -1,10 +1,11 @@
-import { LitElement, html, css } from 'https://unpkg.com/lit-dist/dist/lit.js';
+import { LitElement, html, css } from 'lit-element';
 import { buttonStyles} from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
+import { progressStyles } from 'styles/progress.styles.js';
 
 class CharacterContent extends LitElement {
   static get styles() {
-    return [buttonStyles, commonStyles, css`
+    return [progressStyles, buttonStyles, commonStyles, css`
     * {
       box-sizing:border-box;
     }
@@ -13,7 +14,7 @@ class CharacterContent extends LitElement {
       width: 100%;
       display: flex;
       flex-direction: column;
-      padding: 50px 8px 8px;
+      padding: 8px;
     }
     input {
       width: 100%;
@@ -36,20 +37,6 @@ class CharacterContent extends LitElement {
     }
     button {
       margin-bottom:8px;
-    }
-    progress {
-      position:absolute;
-      height:100%;
-      width:100%;
-      top:0;
-      left:0;
-      z-index:-1;
-      appearance:none;
-      border-radius:var(--border-radius);
-      overflow:hidden;
-    }
-    progress[value]::-webkit-progress-bar {
-      background-color: var(--primary-dark);
     }
     #skill, #level {
       mix-blend-mode:difference;
@@ -132,6 +119,13 @@ class CharacterContent extends LitElement {
     }
   }
 
+  showEquipment(category) {
+    return async () => {
+      // await import('./equipment-content.js');
+      this.shadowRoot.querySelector('equipment-content').showEquipment(category);
+    }
+  }
+
   render() {
     return html`
     <input type='text' value='name' />
@@ -145,7 +139,7 @@ class CharacterContent extends LitElement {
     <skills-content ?hidden=${this.category !== 'skills'}>
       ${Object.entries(this.skills).map(([skill, details]) => 
       html`<button>
-        <progress max='100' value='${details.progress}'>${details.progress}%</progress>
+        <progress class='background' max='100' value='${details.progress}'>${details.progress}%</progress>
         <span id='skill'>${skill}</span>
         <span id='level'>${details.level}</span>
       </button>`
@@ -153,7 +147,7 @@ class CharacterContent extends LitElement {
     </skills-content>
     <equipment-content ?hidden=${this.category !== 'equipment'}>
       ${this.equipmentSlots.map(slot => html`
-        <button>${slot}</button>
+        <button @click=${this.showEquipment(slot)}>${slot}</button>
       `)}
     </equipment-content>
     `

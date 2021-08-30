@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'https://unpkg.com/lit-dist/dist/lit.js';
+import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from '../styles/button.styles.js';
 
 class SideScreen extends LitElement {
@@ -31,16 +31,20 @@ class SideScreen extends LitElement {
           transition:transform 0.2s;
           transition-timing-function: cubic-bezier(0, 0.4, 0.2, 1);
           transition-delay: 0.05s;
+          display:grid;
+          grid-template-rows: 45px 1fr;
         }
         #close {
-          position:absolute;
-          top:8px;
-          right:8px;
+          grid-row:1;
+          margin-top:8px;
+          margin-right:8px;
+          justify-self: flex-end;
           height:33px;
           width:33px;
           padding:0;
           display:grid;
           place-items:center;
+          position:static;
         }
       `
     ]

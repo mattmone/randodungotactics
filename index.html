@@ -55,11 +55,13 @@
       padding: 0;
       background-color: #000;
       --primary-dark: #111;
+      --primary-grey: #666;
       --border-radius: 8px;
       --primary-color: #0A0;
       --accent-color: #AA0;
       --font-size: 24px;
       --button-padding: 8px 16px;
+      --circle-fill: radial-gradient(circle at 50%, var(--accent-color) 40%, rgba(0, 0, 0, 1) 40%);
       font-size: var(--font-size);
     }
 
@@ -154,6 +156,15 @@
       padding: 0;
     }
   </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "lit-element": "https://unpkg.com/lit-dist/dist/lit.js",
+      "utils/": "./src/utils/",
+      "styles/": "./src/styles/"
+    }
+  }
+  </script>
   <script type='module' src='./src/index.js'></script>
 </head>
 

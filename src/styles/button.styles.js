@@ -1,4 +1,4 @@
-import { css } from 'https://unpkg.com/lit-dist/dist/lit.js';
+import { css } from 'lit-element';
 
 export const buttonStyles = css`
   button {
