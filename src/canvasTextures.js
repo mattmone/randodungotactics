@@ -1,5 +1,5 @@
 import { oneOf } from './utils/oneOf.js';
-// trigger a build
+
 class TerrainColor {
   constructor(base) {
     this.base = base;

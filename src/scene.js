@@ -12,7 +12,6 @@ import {
   Vector2,
   Vector3,
   CanvasTexture,
-  CubeTexture,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { makeMap } from './mapping.js';
