@@ -1,4 +1,4 @@
-import { rollDice } from './utils/rollDice.js';
+import { oneOf } from './utils/oneOf.js';
 
 class TerrainColor {
   constructor(base) {
@@ -27,10 +27,10 @@ class TerrainColor {
     return [this.lighterColor, this.lightestColor, this.darkerColor, this.darkestColor];
   }
   lighten(color) {
-    return color.map(value => Math.min(255, value + 30));
+    return color.map(value => Math.min(255, value + 10));
   }
   darken(color) {
-    return color.map(value => Math.max(0, value - 30));
+    return color.map(value => Math.max(0, value - 10));
   }
 }
 const terrain = {
@@ -48,14 +48,15 @@ const terrain = {
 const createdCanvii = {};
 
 export const createTerrainSide = (type, sideTypes) => {
-  // if (createdCanvii[type]) return createdCanvii[type];
+  if (!createdCanvii[type]) createdCanvii[type] = [];
+  if (createdCanvii.length >= 5) return oneOf(createdCanvii[type]);
   const [textureWidth, textureHeight] = [256, 256];
   const canvas = new OffscreenCanvas(textureWidth, textureHeight);
   const context = canvas.getContext('2d');
   const { baseColor, accentColors } = terrain[type];
   context.fillStyle = baseColor;
   context.fillRect(0, 0, textureWidth, textureHeight);
-  const textureRectangles = Array(rollDice(2, 4))
+  const textureRectangles = Array(75)
     .fill(0)
     .map(() => Math.ceil((Math.random() * textureWidth) / 10) + textureWidth / 20);
   for (let rectangle of textureRectangles) {
@@ -71,7 +72,7 @@ export const createTerrainSide = (type, sideTypes) => {
     context.fillRect(0, 0, rectangle, rectangle);
     context.restore();
   }
-  // createdCanvii[type] = canvas;
+  createdCanvii[type].push(canvas);
   if (sideTypes)
     return {
       ...{

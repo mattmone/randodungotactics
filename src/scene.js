@@ -20,8 +20,8 @@ import { createTerrainSide } from './canvasTextures.js';
 import { rollDice } from './utils/rollDice.js';
 import { oneOf } from './utils/oneOf.js';
 
-// const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain', 'plains', 'desert'];
-const mapTypes = ['mountain'];
+const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain', 'plains', 'desert'];
+// const mapTypes = ['mountain'];
 
 const raycaster = new Raycaster();
 const mouse = new Vector2();
