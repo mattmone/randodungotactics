@@ -110,8 +110,12 @@ const finishMap = {
     const frequency = rollDice(3, 3);
     const starting = rollDice(map[0].length / 2);
     const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
-    return map.map((stripe, stripeIndex) =>
-      stripe.map((pixel, pixelIndex) => {
+    const slantAngle = Math.random() * 10 * (Math.PI / 180);
+    const slantDirection = Math.random() > 0.5;
+    return map.map((stripe, stripeIndex) => {
+      const slantElevation =
+        (slantDirection ? stripeIndex : map.length - stripeIndex) * Math.atan(slantAngle);
+      return stripe.map((pixel, pixelIndex) => {
         if (
           pixelIndex >=
             Math.min(
@@ -121,19 +125,54 @@ const finishMap = {
           pixelIndex <
             Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
         )
-          return { elevation: pixelAverage, texture: 'smallroad' };
+          return { elevation: pixelAverage + slantElevation, texture: 'smallroad' };
         const tree = rollDice(20) > 18;
         const rock = !tree && rollDice(20) > 17;
         return {
-          elevation: pixel,
+          elevation: pixel + slantElevation,
           texture: 'plains',
           tree,
           rock,
         };
-      }),
-    );
+      });
+    });
   },
-  mountain: map => {},
+  mountain: map => {
+    const flatMap = map.flat();
+    const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
+    const amplitude = rollDice(4);
+    const pathWidth = rollDice(2, 2);
+    const frequency = rollDice(3, 3);
+    const starting = rollDice(map[0].length / 2);
+    const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
+    const slantAngle = (Math.random() * 30 + 20) * (Math.PI / 180);
+    const slantDirection = Math.random() > 0.5;
+    return map.map((stripe, stripeIndex) => {
+      const slantElevation =
+        (slantDirection ? stripeIndex : map.length - stripeIndex) * Math.atan(slantAngle);
+      return stripe.map((pixel, pixelIndex) => {
+        if (
+          pixelIndex >=
+            Math.min(
+              stripe.length - 2,
+              starting + amplitude * curve(stripeIndex / frequency) - pathWidth / 2,
+            ) &&
+          pixelIndex <
+            Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
+        )
+          return { elevation: pixelAverage + slantElevation, texture: 'road' };
+        const elevation = pixel + slantElevation;
+        const tree = rollDice(20) > (elevation > 7 ? 19 : 17);
+        const rock = !tree && rollDice(20) > (elevation > 7 ? 16 : 19);
+        return {
+          elevation,
+          texture: elevation > 7 ? 'snow' : 'mountain',
+          tree,
+          rock,
+        };
+      });
+    });
+  },
   plains: map => {},
   desert: map => {},
   forest: map => {},

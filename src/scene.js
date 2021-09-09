@@ -18,7 +18,7 @@ import { createTerrainSide } from './canvasTextures.js';
 import { rollDice } from './utils/rollDice.js';
 import { oneOf } from './utils/oneOf.js';
 
-const mapTypes = ['largeRoad', 'smallRoad', 'path'];
+const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain'];
 
 const raycaster = new Raycaster();
 const mouse = new Vector2();
@@ -34,10 +34,10 @@ scene.add(light);
 const group = renderMap();
 scene.add(group);
 
-const focalPoint = new Vector3(4, 0, 10);
+const focalPoint = new Vector3(4, 4, 10);
 camera.position.set(focalPoint.x + 10, focalPoint.y + 10, focalPoint.z + 10);
 camera.lookAt(focalPoint);
-camera.zoom = 2;
+camera.zoom = 1.5;
 camera.updateProjectionMatrix();
 
 const directionalLight = new DirectionalLight(0xffffff, 1);

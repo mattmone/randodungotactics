@@ -38,6 +38,8 @@ const terrain = {
   road: new TerrainColor([70, 70, 70]),
   smallroad: new TerrainColor([80, 70, 30]),
 
+  mountain: new TerrainColor([70, 70, 40]),
+  snow: new TerrainColor([170, 170, 170]),
   rock: new TerrainColor([40, 40, 40]),
   tree: new TerrainColor([20, 60, 10]),
   stump: new TerrainColor([60, 60, 20]),
