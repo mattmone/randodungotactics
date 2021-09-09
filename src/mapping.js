@@ -102,79 +102,62 @@ const finishMap = {
       }),
     );
   },
-  path: map => {
-    const flatMap = map.flat();
-    const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
-    const amplitude = rollDice(4);
-    const pathWidth = rollDice(2, 2);
-    const frequency = rollDice(3, 3);
-    const starting = rollDice(map[0].length / 2);
-    const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
-    const slantAngle = Math.random() * 10 * (Math.PI / 180);
-    const slantDirection = Math.random() > 0.5;
-    return map.map((stripe, stripeIndex) => {
-      const slantElevation =
-        (slantDirection ? stripeIndex : map.length - stripeIndex) * Math.atan(slantAngle);
-      return stripe.map((pixel, pixelIndex) => {
-        if (
-          pixelIndex >=
-            Math.min(
-              stripe.length - 2,
-              starting + amplitude * curve(stripeIndex / frequency) - pathWidth / 2,
-            ) &&
-          pixelIndex <
-            Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
-        )
-          return { elevation: pixelAverage + slantElevation, texture: 'smallroad' };
-        const tree = rollDice(20) > 18;
-        const rock = !tree && rollDice(20) > 17;
-        return {
-          elevation: pixel + slantElevation,
-          texture: 'plains',
-          tree,
-          rock,
-        };
-      });
-    });
-  },
-  mountain: map => {
-    const flatMap = map.flat();
-    const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
-    const amplitude = rollDice(4);
-    const pathWidth = rollDice(2, 2);
-    const frequency = rollDice(3, 3);
-    const starting = rollDice(map[0].length / 2);
-    const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
-    const slantAngle = (Math.random() * 30 + 20) * (Math.PI / 180);
-    const slantDirection = Math.random() > 0.5;
-    return map.map((stripe, stripeIndex) => {
-      const slantElevation =
-        (slantDirection ? stripeIndex : map.length - stripeIndex) * Math.atan(slantAngle);
-      return stripe.map((pixel, pixelIndex) => {
-        if (
-          pixelIndex >=
-            Math.min(
-              stripe.length - 2,
-              starting + amplitude * curve(stripeIndex / frequency) - pathWidth / 2,
-            ) &&
-          pixelIndex <
-            Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
-        )
-          return { elevation: pixelAverage + slantElevation, texture: 'road' };
-        const elevation = pixel + slantElevation;
-        const tree = rollDice(20) > (elevation > 7 ? 19 : 17);
-        const rock = !tree && rollDice(20) > (elevation > 7 ? 16 : 19);
-        return {
-          elevation,
-          texture: elevation > 7 ? 'snow' : 'mountain',
-          tree,
-          rock,
-        };
-      });
-    });
-  },
-  plains: map => {},
-  desert: map => {},
+  path: map =>
+    buildMap(
+      map,
+      true,
+      rollDice(4),
+      rollDice(2, 2),
+      rollDice(3, 3),
+      rollDice(map[0].length / 2),
+      Math.random() * 10,
+      0.05,
+      0.05,
+      'smallroad',
+      'plains',
+    ),
+  mountain: map =>
+    buildMap(
+      map,
+      true,
+      rollDice(4),
+      rollDice(2, 2),
+      rollDice(3, 3),
+      rollDice(map[0].length / 2),
+      Math.random() * 30 + 20,
+      elevation => (elevation > rollDice(4) + 3 ? 0.08 : 0.05),
+      elevation => (elevation > rollDice(4) + 3 ? 0.05 : 0.08),
+      'road',
+      elevation => (elevation > rollDice(4) + 3 ? 'snow' : 'mountain'),
+    ),
+  plains: map =>
+    buildMap(
+      map,
+      false,
+      rollDice(2),
+      rollDice(2, 3),
+      rollDice(3, 2),
+      rollDice(map[0].length / 2),
+      Math.random() * 5,
+      0.01,
+      0,
+      'plains',
+      'plains',
+    ),
+  desert: map =>
+    buildMap(
+      map,
+      false,
+      rollDice(2),
+      rollDice(2, 2),
+      rollDice(3, 2),
+      rollDice(map[0].length / 2),
+      Math.random() * 0 * (Math.PI / 180),
+      0.01,
+      0,
+      'desert',
+      'desert',
+    ),
   forest: map => {},
   river: map => {},
   creek: map => {},
@@ -311,4 +294,54 @@ function improvedErosion(map, iterations) {
       }
     }
   }
+}
+
+function buildMap(
+  map,
+  averagedPath,
+  amplitude,
+  pathWidth,
+  frequency,
+  starting,
+  slantAngle,
+  rockChance,
+  treeChance,
+  pathTexture,
+  baseTexture,
+) {
+  const flatMap = map.flat();
+  const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
+  const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
+  const slantDirection = Math.random() > 0.5;
+  return map.map((stripe, stripeIndex) => {
+    const slantElevation =
+      (slantDirection ? stripeIndex : map.length - stripeIndex) *
+      Math.atan(slantAngle * (Math.PI / 180));
+    return stripe.map((pixel, pixelIndex) => {
+      if (
+        pixelIndex >=
+          Math.min(
+            stripe.length - 2,
+            starting + amplitude * curve(stripeIndex / frequency) - pathWidth / 2,
+          ) &&
+        pixelIndex <
+          Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
+      )
+        return {
+          elevation: (averagedPath ? pixelAverage : pixel) + slantElevation,
+          texture: pathTexture,
+        };
+      const elevation = pixel + slantElevation;
+      const rock =
+        Math.random() < (typeof rockChance === 'function' ? rockChance(elevation) : rockChance);
+      const tree =
+        Math.random() < (typeof treeChance === 'function' ? treeChance(elevation) : treeChance);
+      return {
+        elevation,
+        texture: typeof baseTexture === 'function' ? baseTexture(elevation) : baseTexture,
+        rock,
+        tree,
+      };
+    });
+  });
 }

@@ -37,7 +37,7 @@ const terrain = {
   plains: new TerrainColor([20, 100, 20]),
   road: new TerrainColor([70, 70, 70]),
   smallroad: new TerrainColor([80, 70, 30]),
-
+  desert: new TerrainColor([156, 136, 73]),
   mountain: new TerrainColor([70, 70, 40]),
   snow: new TerrainColor([170, 170, 170]),
   rock: new TerrainColor([40, 40, 40]),
@@ -47,7 +47,7 @@ const terrain = {
 
 const createdCanvii = {};
 
-export const createTerrainSide = type => {
+export const createTerrainSide = (type, sideTypes) => {
   // if (createdCanvii[type]) return createdCanvii[type];
   const [textureWidth, textureHeight] = [256, 256];
   const canvas = new OffscreenCanvas(textureWidth, textureHeight);
@@ -72,5 +72,19 @@ export const createTerrainSide = type => {
     context.restore();
   }
   // createdCanvii[type] = canvas;
+  if (sideTypes)
+    return {
+      ...{
+        positiveX: canvas,
+        positiveY: canvas,
+        positiveZ: canvas,
+        negativeX: canvas,
+        negativeY: canvas,
+        negativeZ: canvas,
+      },
+      ...Object.fromEntries(
+        Object.entries(sideTypes).map(([side, type]) => [side, createTerrainSide(type)]),
+      ),
+    };
   return canvas;
 };

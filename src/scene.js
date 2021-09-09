@@ -12,13 +12,16 @@ import {
   Vector2,
   Vector3,
   CanvasTexture,
-} from 'https://cdn.skypack.dev/three';
+  CubeTexture,
+} from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { makeMap } from './mapping.js';
 import { createTerrainSide } from './canvasTextures.js';
 import { rollDice } from './utils/rollDice.js';
 import { oneOf } from './utils/oneOf.js';
 
-const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain'];
+// const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain', 'plains', 'desert'];
+const mapTypes = ['mountain'];
 
 const raycaster = new Raycaster();
 const mouse = new Vector2();
@@ -35,9 +38,8 @@ const group = renderMap();
 scene.add(group);
 
 const focalPoint = new Vector3(4, 4, 10);
-camera.position.set(focalPoint.x + 10, focalPoint.y + 10, focalPoint.z + 10);
+camera.position.set(focalPoint.x + 15, focalPoint.y + 15, focalPoint.z + 15);
 camera.lookAt(focalPoint);
-camera.zoom = 1.5;
 camera.updateProjectionMatrix();
 
 const directionalLight = new DirectionalLight(0xffffff, 1);
@@ -47,16 +49,17 @@ directionalLight.target = group;
 scene.add(directionalLight);
 
 const renderer = new WebGLRenderer();
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.maxZoom = 2;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-renderer.domElement.addEventListener('click', () => {
+document.querySelector('button').addEventListener('click', () => {
   const oldMap = scene.getObjectByName('map');
   scene.remove(oldMap);
   const mapGroup = renderMap();
   scene.add(mapGroup);
 });
-
-renderer.domElement.addEventListener('mousemove', event => {
+renderer.domElement.addEventListener('click', event => {
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
@@ -64,17 +67,41 @@ renderer.domElement.addEventListener('mousemove', event => {
   const intersects = raycaster.intersectObject(scene, true);
 
   if (intersects.length) {
-    if (intersects[0].object !== intersectionObject) {
-      if (intersectionObject) {
-        intersectionObject.material.color.set(intersectionObject.priorColor);
-      }
-      intersectionObject = intersects[0].object;
-      intersectionObject.priorColor = JSON.parse(JSON.stringify(intersectionObject.material.color));
-      intersectionObject.material.color.set(intersectionObject.material.color.addScalar(0.5));
-    }
-  } else if (intersectionObject)
-    intersectionObject.material.color.set(intersectionObject.priorColor);
+    const [
+      {
+        object: { position },
+      },
+    ] = intersects;
+    const { x, y, z } = position;
+    console.log(x, y, z);
+    let xModifier = 1;
+    let zModifier = 1;
+    if (x < 6) xModifier = -1;
+    if (z < 12) zModifier = -1;
+    camera.position.set(x + 10 * xModifier, y + 10, z + 10 * zModifier);
+    camera.lookAt(position);
+  }
 });
+
+// renderer.domElement.addEventListener('mousemove', event => {
+//   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//   raycaster.setFromCamera(mouse, camera);
+
+//   const intersects = raycaster.intersectObject(scene, true);
+
+//   if (intersects.length) {
+//     if (intersects[0].object !== intersectionObject) {
+//       if (intersectionObject) {
+//         intersectionObject.material.color.set(intersectionObject.priorColor);
+//       }
+//       intersectionObject = intersects[0].object;
+//       intersectionObject.priorColor = JSON.parse(JSON.stringify(intersectionObject.material.color));
+//       intersectionObject.material.color.set(intersectionObject.material.color.addScalar(0.5));
+//     }
+//   } else if (intersectionObject)
+//     intersectionObject.material.color.set(intersectionObject.priorColor);
+// });
 
 function animate() {
   requestAnimationFrame(animate);
@@ -106,9 +133,17 @@ function renderMap() {
           new Array(layers * 2).fill(0).forEach((_, cubeIndex, treeLayers) => {
             const size = cubeIndex / (treeLayers.length + 1) + 0.5;
             const treeGeometry = new BoxGeometry(size, 0.5, size);
-            const textureCanvas = createTerrainSide('tree');
-            const texture = new CanvasTexture(textureCanvas);
-            const treeMaterial = new MeshStandardMaterial({ map: texture });
+            const textureCanvas =
+              pixel.texture === 'snow'
+                ? createTerrainSide('tree', { positiveZ: 'snow' })
+                : createTerrainSide('tree');
+            let cubeImages = Array(6).fill(new CanvasTexture(textureCanvas));
+            if (textureCanvas.positiveX)
+              cubeImages = Object.values(textureCanvas).map(canvas => new CanvasTexture(canvas));
+            // console.log(cubeImages);
+            const treeMaterial = cubeImages.map(
+              canvasTexture => new MeshStandardMaterial({ map: canvasTexture }),
+            );
             const treeCube = new Mesh(treeGeometry, treeMaterial);
             treeCube.position.set(
               xPosition,
@@ -120,17 +155,24 @@ function renderMap() {
         }
       }
       if (pixel.rock) {
-        const textureCanvas = createTerrainSide('rock');
-        const texture = new CanvasTexture(textureCanvas);
-        const rockMaterial = new MeshStandardMaterial({ map: texture });
+        const textureCanvas =
+          pixel.texture === 'snow'
+            ? createTerrainSide('rock', { positiveZ: 'snow' })
+            : createTerrainSide('rock');
+        let cubeImages = Array(6).fill(new CanvasTexture(textureCanvas));
+        if (textureCanvas.positiveX)
+          cubeImages = Object.values(textureCanvas).map(canvas => new CanvasTexture(canvas));
+        const rockMaterial = cubeImages.map(
+          canvasTexture => new MeshStandardMaterial({ map: canvasTexture }),
+        );
         const rockGeometry = new BoxGeometry(0.9, 1, 0.9);
         const rockCube = new Mesh(rockGeometry, rockMaterial);
         rockCube.position.set(xPosition, pixel.elevation + 1, zPosition);
         group.add(rockCube);
       }
+      const textureCanvas = createTerrainSide(pixel.texture);
+      const texture = new CanvasTexture(textureCanvas);
       do {
-        const textureCanvas = createTerrainSide(pixel.texture);
-        const texture = new CanvasTexture(textureCanvas);
         const boxMaterial = new MeshStandardMaterial({
           map: texture,
         });

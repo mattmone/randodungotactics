@@ -20,5 +20,8 @@
   "homepage": "https://github.com/mattmone/randodungotactics#readme",
   "devDependencies": {
     "@web/dev-server": "^0.1.22"
+  },
+  "dependencies": {
+    "three": "^0.132.2"
   }
 }

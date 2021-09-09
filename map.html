@@ -10,9 +10,31 @@
       padding:0;
       display:flex;
     }
+    button {
+      color:green;
+      border: 1px solid green;
+      border-radius:8px;
+      background:none;
+      position:fixed;
+      top:1em;
+      right:1em;
+      padding: 1em 2em;
+      cursor:pointer;
+    }
   </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./node_modules/three/build/three.module.js",
+        "three/": "./node_modules/three/",
+        "utils/": "./src/utils/",
+        "styles/": "./src/styles/"
+      }
+    }
+    </script>
   <script src="/src/scene.js" type='module'></script>
 </head>
 <body>
+  <button>Get a new map</button>
 </body>
 </html>
