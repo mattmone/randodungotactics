@@ -19,7 +19,16 @@ import { createTerrainSide } from './canvasTextures.js';
 import { rollDice } from './utils/rollDice.js';
 import { oneOf } from './utils/oneOf.js';
 
-const mapTypes = ['largeRoad', 'smallRoad', 'path', 'mountain', 'plains', 'desert'];
+const mapTypes = [
+  'largeRoad',
+  'smallRoad',
+  'path',
+  'mountain',
+  'plains',
+  'desert',
+  'river',
+  'creek',
+];
 // const mapTypes = ['mountain'];
 
 const raycaster = new Raycaster();
@@ -110,7 +119,10 @@ function animate() {
 animate();
 
 function renderMap() {
-  const map = makeMap({ type: oneOf(mapTypes) });
+  const type = oneOf(mapTypes);
+  document.querySelector('#mapType').textContent = type;
+  const map = makeMap({ type });
+
   const boxGeometry = new BoxGeometry();
   const group = new Group();
   let xPosition = 0;

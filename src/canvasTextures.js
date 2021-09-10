@@ -43,6 +43,7 @@ const terrain = {
   rock: new TerrainColor([40, 40, 40]),
   tree: new TerrainColor([20, 60, 10]),
   stump: new TerrainColor([60, 60, 20]),
+  water: new TerrainColor([20, 20, 80]),
 };
 
 const createdCanvii = {};

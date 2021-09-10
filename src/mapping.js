@@ -60,48 +60,34 @@ const mapOptions = {
 };
 
 const finishMap = {
-  largeRoad: map => {
-    const flatMap = map.flat();
-    const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
-    return map.map((stripe, stripeIndex) =>
-      stripe.map((pixel, pixelIndex) => {
-        if (
-          pixelIndex >= Math.floor(stripe.length / 2) - Math.floor(stripe.length / 4) &&
-          pixelIndex < Math.floor(stripe.length / 2) + Math.floor(stripe.length / 4)
-        )
-          return { elevation: pixelAverage, texture: 'road' };
-        const tree = rollDice(20) > 19;
-        const rock = !tree && rollDice(20) > 19;
-        return {
-          elevation: pixel,
-          texture: 'plains',
-          tree,
-          rock,
-        };
-      }),
-    );
-  },
-  smallRoad: map => {
-    const flatMap = map.flat();
-    const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
-    return map.map((stripe, stripeIndex) =>
-      stripe.map((pixel, pixelIndex) => {
-        if (
-          pixelIndex >= Math.floor(stripe.length / 2) - Math.floor(stripe.length / 5) &&
-          pixelIndex < Math.floor(stripe.length / 2) + Math.floor(stripe.length / 5)
-        )
-          return { elevation: pixelAverage, texture: 'smallroad' };
-        const tree = rollDice(20) > 18;
-        const rock = !tree && rollDice(20) > 17;
-        return {
-          elevation: pixel,
-          texture: 'plains',
-          tree,
-          rock,
-        };
-      }),
-    );
-  },
+  largeRoad: map =>
+    buildMap(
+      map,
+      true,
+      0,
+      Math.ceil(map.length / 4),
+      1,
+      map[0].length / 2,
+      Math.random() * 3,
+      0.02,
+      0.02,
+      'road',
+      'plains',
+    ),
+  smallRoad: map =>
+    buildMap(
+      map,
+      true,
+      0,
+      Math.ceil(map.length / 5),
+      1,
+      map[0].length / 2,
+      Math.random() * 3,
+      0.06,
+      0.06,
+      'smallroad',
+      'plains',
+    ),
   path: map =>
     buildMap(
       map,
@@ -109,7 +95,7 @@ const finishMap = {
       rollDice(4),
       rollDice(2, 2),
       rollDice(3, 3),
-      rollDice(map[0].length / 2),
+      rollDice(3) - 2 + map[0].length / 2,
       Math.random() * 10,
       0.05,
       0.05,
@@ -123,7 +109,7 @@ const finishMap = {
       rollDice(4),
       rollDice(2, 2),
       rollDice(3, 3),
-      rollDice(map[0].length / 2),
+      rollDice(3) - 2 + map[0].length / 2,
       Math.random() * 30 + 20,
       elevation => (elevation > rollDice(4) + 3 ? 0.08 : 0.05),
       elevation => (elevation > rollDice(4) + 3 ? 0.05 : 0.08),
@@ -139,7 +125,7 @@ const finishMap = {
       rollDice(3, 2),
       rollDice(map[0].length / 2),
       Math.random() * 5,
-      0.01,
+      0.02,
       0,
       'plains',
       'plains',
@@ -153,14 +139,40 @@ const finishMap = {
       rollDice(3, 2),
       rollDice(map[0].length / 2),
       Math.random() * 0 * (Math.PI / 180),
-      0.01,
+      0.02,
       0,
       'desert',
       'desert',
     ),
   forest: map => {},
-  river: map => {},
-  creek: map => {},
+  river: map =>
+    buildMap(
+      map,
+      true,
+      rollDice(4),
+      rollDice(2, 2),
+      rollDice(3, 3),
+      map[0].length / 2 + (rollDice(3) - 2),
+      Math.random() * 10,
+      0.03,
+      0.03,
+      'water',
+      'plains',
+    ),
+  creek: map =>
+    buildMap(
+      map,
+      true,
+      rollDice(4),
+      rollDice(2),
+      rollDice(3, 3),
+      map[0].length / 2 + (rollDice(3) - 2),
+      Math.random() * 10,
+      0.04,
+      0.04,
+      'water',
+      'plains',
+    ),
 };
 
 export function makeMap(options = {}) {
