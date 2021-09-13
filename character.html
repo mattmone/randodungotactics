@@ -12,11 +12,29 @@
       padding: 0;
       display: flex;
     }
+    #fleshColor {
+      position:absolute;
+      bottom:1em;
+      right:1em;
+      border:0;
+    }
   </style>
-  <script src="/src/character.js" type='module'></script>
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.skypack.dev/three",
+            "three/": "https://cdn.skypack.dev/three/",
+            "utils/": "./src/utils/",
+            "styles/": "./src/styles/"
+          }
+        }
+        </script>
+  <script src="/src/character-testing.js" type='module'></script>
 </head>
 
 <body>
+
+  <input id='fleshColor' type='color'></input>
 </body>
 
 </html>

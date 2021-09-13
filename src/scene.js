@@ -67,29 +67,29 @@ document.querySelector('button').addEventListener('click', () => {
   const mapGroup = renderMap();
   scene.add(mapGroup);
 });
-renderer.domElement.addEventListener('click', event => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
+// renderer.domElement.addEventListener('click', event => {
+//   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+//   mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+//   raycaster.setFromCamera(mouse, camera);
 
-  const intersects = raycaster.intersectObject(scene, true);
+//   const intersects = raycaster.intersectObject(scene, true);
 
-  if (intersects.length) {
-    const [
-      {
-        object: { position },
-      },
-    ] = intersects;
-    const { x, y, z } = position;
-    console.log(x, y, z);
-    let xModifier = 1;
-    let zModifier = 1;
-    if (x < 6) xModifier = -1;
-    if (z < 12) zModifier = -1;
-    camera.position.set(x + 10 * xModifier, y + 10, z + 10 * zModifier);
-    camera.lookAt(position);
-  }
-});
+//   if (intersects.length) {
+//     const [
+//       {
+//         object: { position },
+//       },
+//     ] = intersects;
+//     const { x, y, z } = position;
+//     console.log(x, y, z);
+//     let xModifier = 1;
+//     let zModifier = 1;
+//     if (x < 6) xModifier = -1;
+//     if (z < 12) zModifier = -1;
+//     camera.position.set(x + 10 * xModifier, y + 10, z + 10 * zModifier);
+//     camera.lookAt(position);
+//   }
+// });
 
 // renderer.domElement.addEventListener('mousemove', event => {
 //   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -125,8 +125,8 @@ function renderMap() {
 
   const boxGeometry = new BoxGeometry();
   const group = new Group();
-  let xPosition = 0;
-  let zPosition = 0;
+  let xPosition = -map[0].length / 2;
+  let zPosition = -map.length / 2;
 
   for (let column of map) {
     for (let pixel of column) {
@@ -195,7 +195,7 @@ function renderMap() {
       xPosition += 1;
     }
     zPosition += 1;
-    xPosition = 0;
+    xPosition = -map[0].length / 2;
   }
   group.name = 'map';
   return group;
