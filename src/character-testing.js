@@ -59,6 +59,24 @@ fleshColorPicker.value = `#${character.fleshMaterial.color.getHexString()}`;
 fleshColorPicker.addEventListener('change', ({ target: { value } }) => {
   character.setFleshColor(value);
 });
+const hairColorPicker = document.querySelector('#hairColor');
+hairColorPicker.value = `#${character.hairMaterial.color.getHexString()}`;
+hairColorPicker.addEventListener('change', ({ target: { value } }) => {
+  character.setHairColor(value);
+});
+const eyeColorPicker = document.querySelector('#eyeColor');
+eyeColorPicker.value = `#${character.eyeMaterial.color.getHexString()}`;
+eyeColorPicker.addEventListener('change', ({ target: { value } }) => {
+  character.setEyeColor(value);
+});
+document.querySelector('#setHair').addEventListener('click', async () => {
+  const hairStyles = ['bald', 'topknot', 'flat', 'mohawk'];
+  const chosenHairIndex = hairStyles.indexOf(character.chosenHairStyle || 'bald');
+  character.chosenHairStyle = hairStyles[(chosenHairIndex + 1) % hairStyles.length];
+  if (character.chosenHairStyle === 'bald') return character.setHair(false);
+  const { getHair } = await import(`./hair/${character.chosenHairStyle}.js`);
+  character.setHair(getHair);
+});
 
 scene.add(character.model);
 
@@ -69,16 +87,18 @@ camera.position.set(
   focalPoint.position.z + 10,
 );
 camera.lookAt(focalPoint.position);
-camera.zoom = 2;
+camera.zoom = 1;
 camera.updateProjectionMatrix();
 
 const directionalLight = new DirectionalLight(0xffffff, 1);
 directionalLight.position.set(-30, 30, 30);
 directionalLight.target = focalPoint;
+directionalLight.castShadow = true;
 
 scene.add(directionalLight);
 
 const renderer = new WebGLRenderer();
+renderer.shadowMap.enabled = true;
 const controls = new OrbitControls(camera, renderer.domElement);
 
 renderer.setSize(window.innerWidth, window.innerHeight);

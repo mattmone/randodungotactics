@@ -12,11 +12,30 @@
       padding: 0;
       display: flex;
     }
-    #fleshColor {
+    button {
+      background:none;
+      color:green;
+      border: 1px solid green;
+      border-radius:8px;
+    }
+    input, button, label {
+      cursor: pointer;
+    }
+    #controls {
       position:absolute;
-      bottom:1em;
       right:1em;
+      bottom:1em;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
       border:0;
+      background:black;
+    }
+    label {
+      color: white;
+      display:flex;
+      justify-content:space-between;
+      gap: 8px;
     }
   </style>
     <script type="importmap">
@@ -33,8 +52,18 @@
 </head>
 
 <body>
-
-  <input id='fleshColor' type='color'></input>
+  <div id='controls'>
+    <label>Flesh Color
+      <input id='fleshColor' type='color'></input>
+    </label>
+    <label>Hair Color
+      <input id='hairColor' type='color'></input>
+    </label>
+    <label>Eye Color
+      <input id='eyeColor' type='color'></input>
+    </label>
+    <button id='setHair' class='control'>Switch Hair</button>
+  </div>
 </body>
 
 </html>

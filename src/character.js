@@ -82,12 +82,19 @@ export class Character {
   }
 
   get baseSize() {
-    return 3;
+    return 1;
+  }
+  get headSize() {
+    return {
+      width: 10,
+      height: 12,
+      depth: 10,
+    };
   }
   get upperBodySize() {
     return {
       width: (this.baseSize * 2) / 3,
-      height: (this.baseSize * 2.5) / 3,
+      height: (this.baseSize * 1.5) / 3,
       depth: (this.baseSize * 2) / 3,
     };
   }
@@ -128,15 +135,80 @@ export class Character {
       depth: this.baseSize / 3,
     };
   }
+  get baseFleshColor() {
+    return new Color(0xbb9988);
+  }
   get fleshMaterial() {
     if (this._fleshMaterial) return this._fleshMaterial;
-    this._fleshMaterial = new MeshStandardMaterial({ color: 0xdd9988 });
+    this._fleshMaterial = new MeshStandardMaterial();
+    this._fleshMaterial.color = this.baseFleshColor;
     return this._fleshMaterial;
+  }
+  get darkerFleshMaterial() {
+    if (this._darkerFleshMaterial) return this._darkerFleshMaterial;
+    this._darkerFleshMaterial = new MeshStandardMaterial({
+      color: `#${this.baseFleshColor.offsetHSL(0, 0, -0.1).getHexString()}`,
+    });
+    return this._darkerFleshMaterial;
+  }
+  get darkestFleshMaterial() {
+    if (this._darkestFleshMaterial) return this._darkestFleshMaterial;
+    this._darkestFleshMaterial = new MeshStandardMaterial({
+      color: `#${this.baseFleshColor.offsetHSL(0, 0, -0.2).getHexString()}`,
+    });
+    return this._darkestFleshMaterial;
+  }
+  get hairMaterial() {
+    if (this._hairMaterial) return this._hairMaterial;
+    this._hairMaterial = new MeshStandardMaterial({ color: 0x333333 });
+    return this._hairMaterial;
+  }
+  get eyeMaterial() {
+    if (this._eyeMaterial) return this._eyeMaterial;
+    this._eyeMaterial = new MeshStandardMaterial({ color: 0x333333 });
+    return this._eyeMaterial;
   }
   get head() {
     if (this._head) return this._head;
-    const headBox = new BoxGeometry(this.baseSize, this.baseSize, this.baseSize);
-    this._head = new Mesh(headBox, this.fleshMaterial);
+    const facia = new Mesh(new BoxGeometry(10, 7, 10), this.darkerFleshMaterial);
+    const cranium = new Mesh(new BoxGeometry(8, 10, 1), this.darkerFleshMaterial);
+    cranium.position.set(0, -2.5, -5.5);
+    facia.add(cranium);
+    const jaw = new Mesh(new BoxGeometry(10, 5, 10), this.fleshMaterial);
+    jaw.position.y = -6;
+    facia.add(jaw);
+    const scalp = new Mesh(new BoxGeometry(8, 2, 8), this.darkerFleshMaterial);
+    scalp.position.y = 3.5;
+    facia.add(scalp);
+    const leftTop = new Mesh(new BoxGeometry(1, 6, 8), this.darkerFleshMaterial);
+    leftTop.position.set(5.5, -0.5, 0);
+    facia.add(leftTop);
+    const rightTop = leftTop.clone();
+    rightTop.position.set(-5.5, -0.5, 0);
+    facia.add(rightTop);
+    const leftBottom = new Mesh(new BoxGeometry(1, 5, 7), this.darkerFleshMaterial);
+    leftBottom.position.set(5.5, 0, -0.5);
+    jaw.add(leftBottom);
+    const rightBottom = leftBottom.clone();
+    rightBottom.position.set(-5.5, 0, -0.5);
+    jaw.add(rightBottom);
+    const outerLeftEar = new Mesh(new BoxGeometry(1, 1, 3), this.darkestFleshMaterial);
+    outerLeftEar.position.set(1, -0.5, -0.5);
+    const lowerOuterLeftEar = new Mesh(new BoxGeometry(1, 3, 1), this.darkestFleshMaterial);
+    lowerOuterLeftEar.position.set(0, -1.5, -1);
+    const innerLeftEar = new Mesh(new BoxGeometry(1, 1, 2), this.darkerFleshMaterial);
+    innerLeftEar.position.set(0, -1, 0.5);
+    const lowerInnerLeftEar = new Mesh(new BoxGeometry(1, 2, 1), this.darkerFleshMaterial);
+    lowerInnerLeftEar.position.set(0, -1, -0.5);
+    innerLeftEar.add(lowerInnerLeftEar);
+    outerLeftEar.add(lowerOuterLeftEar);
+    outerLeftEar.add(innerLeftEar);
+    leftTop.add(outerLeftEar);
+    const outerRightEar = outerLeftEar.clone();
+    outerRightEar.position.set(-1, -0.5, -0.5);
+    rightTop.add(outerRightEar);
+
+    this._head = facia;
     return this._head;
   }
   get upperBody() {
@@ -198,9 +270,66 @@ export class Character {
     leg.add(foot);
     return this._leg;
   }
+  get eye() {
+    if (this._eye) return this._eye;
+    const size = 2;
+    const thickness = 0.01;
+    this._eye = new Mesh(
+      new BoxGeometry(size, size, thickness),
+      new MeshStandardMaterial({ color: 0xffffff }),
+    );
+    const pupil = new Mesh(new BoxGeometry(size / 2, size / 2, thickness), this.eyeMaterial);
+    pupil.position.set(0, -size / 4, thickness);
+    this._eye.add(pupil);
+    this.eye.position.set(0, -1, 5);
+    return this._eye;
+  }
+  get nose() {
+    if (this._nose) return this._nose;
+    const size = 2;
+    this._nose = new Mesh(new BoxGeometry(size * 2, size, size / 2), this.darkerFleshMaterial);
+    this._nose.position.set(0, -3, 5.5);
+    this._nose.castShadow = true;
+    return this._nose;
+  }
+  get mouth() {
+    if (this._mouth) return this._mouth;
+    const width = this.baseSize / 4;
+    const size = 0.2;
+    const thickness = 0.01;
+    this._mouth = new Mesh(
+      new BoxGeometry(width, size, thickness),
+      new MeshStandardMaterial({ color: 0xaa6655 }),
+    );
+    this._mouth.position.set(0, -this.baseSize / 4, this.baseSize / 2 + thickness / 2);
+    return this._mouth;
+  }
+  get eyebrow() {
+    if (this._eyebrow) return this._eyebrow;
+    const width = 3;
+    const size = 1;
+    const thickness = 1;
+    this._eyebrow = new Mesh(new BoxGeometry(width, size, thickness), this.hairMaterial);
+    this._eyebrow.position.set(0, 0.5, 5.5);
+    return this._eyebrow;
+  }
   get model() {
     if (this._baseModel) return this._baseModel;
     this.head.add(this.upperBody);
+    this.leftEye = this.eye.clone();
+    this.leftEye.position.x = -2;
+    this.rightEye = this.eye.clone();
+    this.rightEye.position.x = 2;
+    this.head.add(this.nose);
+    this.head.add(this.mouth);
+    this.head.add(this.leftEye);
+    this.head.add(this.rightEye);
+    this.leftEyebrow = this.eyebrow.clone();
+    this.leftEyebrow.position.x = -2.5;
+    this.rightEyebrow = this.eyebrow.clone();
+    this.rightEyebrow.position.x = 2.5;
+    this.head.add(this.leftEyebrow);
+    this.head.add(this.rightEyebrow);
     this.leftArm = this.arm.clone();
     this.leftArm.position.set(
       -(this.upperBodySize.width / 2 + this.armSize.width / 2) * 1.1,
@@ -253,6 +382,14 @@ export class Character {
     for (let action of this.actions) action.play();
   }
 
+  setHair(getHair) {
+    if (this.currentHair) this.head.remove(this.currentHair);
+    if (!getHair) return;
+    const hair = getHair(this.baseSize, this.hairMaterial);
+    this.head.add(hair);
+    this.currentHair = hair;
+  }
+
   update(delta) {
     if (!this.mixers) return;
     for (let mixer of this.mixers) mixer.update(delta);
@@ -260,5 +397,13 @@ export class Character {
 
   setFleshColor(color) {
     this._fleshMaterial.color = new Color(color);
+    this._darkerFleshMaterial.color = new Color(color).offsetHSL(0, 0, -0.1);
+    this._darkestFleshMaterial.color = new Color(color).offsetHSL(0, 0, -0.2);
+  }
+  setEyeColor(color) {
+    this._eyeMaterial.color = new Color(color);
+  }
+  setHairColor(color) {
+    this._hairMaterial.color = new Color(color);
   }
 }
