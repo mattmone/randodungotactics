@@ -1,4 +1,4 @@
-import { rollDice } from './utils/rollDice.js';
+import { rollDice } from './rollDice.js';
 
 const dotProduct = (grad, x, y) => grad[0] * x + grad[1] * y;
 
@@ -155,7 +155,7 @@ const finishMap = {
       map[0].length / 2 + (rollDice(3) - 2),
       Math.random() * 10,
       0.03,
-      0.03,
+      0.04,
       'water',
       'plains',
     ),
@@ -169,7 +169,7 @@ const finishMap = {
       map[0].length / 2 + (rollDice(3) - 2),
       Math.random() * 10,
       0.04,
-      0.04,
+      0.07,
       'water',
       'plains',
     ),
@@ -325,6 +325,7 @@ function buildMap(
   const pixelAverage = flatMap.reduce((acc, value) => acc + value) / flatMap.length;
   const curve = rollDice(2) - 1 ? Math.sin : Math.cos;
   const slantDirection = Math.random() > 0.5;
+  const entranceDirection = Math.random() > 0.5;
   return map.map((stripe, stripeIndex) => {
     const slantElevation =
       (slantDirection ? stripeIndex : map.length - stripeIndex) *
@@ -342,17 +343,28 @@ function buildMap(
         return {
           elevation: (averagedPath ? pixelAverage : pixel) + slantElevation,
           texture: pathTexture,
+          entry:
+            pathTexture !== 'water' &&
+            ((entranceDirection && stripeIndex <= 3) ||
+              (!entranceDirection && stripeIndex >= map.length - 4)),
         };
       const elevation = pixel + slantElevation;
-      const rock =
-        Math.random() < (typeof rockChance === 'function' ? rockChance(elevation) : rockChance);
       const tree =
         Math.random() < (typeof treeChance === 'function' ? treeChance(elevation) : treeChance);
+      const rock =
+        !tree &&
+        Math.random() < (typeof rockChance === 'function' ? rockChance(elevation) : rockChance);
+      const entry =
+        !rock &&
+        !tree &&
+        ((entranceDirection && stripeIndex <= 3) ||
+          (!entranceDirection && stripeIndex >= map.length - 4));
       return {
         elevation,
         texture: typeof baseTexture === 'function' ? baseTexture(elevation) : baseTexture,
         rock,
         tree,
+        entry,
       };
     });
   });

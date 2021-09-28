@@ -1,6 +1,7 @@
 import {
   Scene,
   OrthographicCamera,
+  PerspectiveCamera,
   WebGLRenderer,
   BoxGeometry,
   MeshStandardMaterial,
@@ -14,8 +15,8 @@ import {
   CanvasTexture,
 } from 'https://cdn.skypack.dev/three';
 
-import { makeMap } from './mapping.js';
-import { createTerrainSide } from './canvasTextures.js';
+import { makeMap } from './utils/makeMap.js';
+import { createTerrainSide } from './utils/createTerrainSide.js';
 import { rollDice } from './utils/rollDice.js';
 import { oneOf } from './utils/oneOf.js';
 
@@ -40,7 +41,7 @@ const state = {
 
 const raycaster = new Raycaster();
 const mouse = new Vector2();
-let camera, scene;
+let camera, camera2, scene;
 
 let intersectionObject;
 function main({ canvas }) {
@@ -48,6 +49,8 @@ function main({ canvas }) {
   const aspect = canvas.width / canvas.height;
   const d = 20;
   camera = new OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+  scene.activeCamera = camera;
+  camera2 = new PerspectiveCamera(80, aspect, 1, 1000);
 
   const light = new AmbientLight(0xffffff, 0.8);
   scene.add(light);
@@ -55,9 +58,11 @@ function main({ canvas }) {
   const group = renderMap();
   scene.add(group);
 
-  const focalPoint = new Vector3(0, 5, 0);
+  const focalPoint = new Vector3(0, 0, 0);
   camera.position.set(focalPoint.x + 15, focalPoint.y + 15, focalPoint.z + 15);
+  camera2.position.set(focalPoint.x + 15, focalPoint.y + 15, focalPoint.z + 15);
   camera.lookAt(focalPoint);
+  camera2.lookAt(focalPoint);
   camera.updateProjectionMatrix();
 
   const directionalLight = new DirectionalLight(0xffffff, 1);
@@ -115,8 +120,9 @@ function main({ canvas }) {
   function animate(time) {
     const rotation = (state.delta?.x || 0) / 50;
     scene.rotation.y = rotation;
-    scene.rotation.x = Math.sin((-10 * Math.PI) / 180);
-    renderer.render(scene, camera);
+    scene.activeCamera.lookAt(focalPoint);
+    scene.activeCamera.updateProjectionMatrix();
+    renderer.render(scene, scene.activeCamera);
     requestAnimationFrame(animate);
   }
 
@@ -231,20 +237,20 @@ function drag({ x, y }) {
 }
 
 function zoom({ delta }) {
-  camera.zoom = Math.min(4, Math.max(0.5, camera.zoom + delta / 700));
-  camera.updateProjectionMatrix();
+  scene.activeCamera.zoom = Math.min(4, Math.max(0.5, scene.activeCamera.zoom + delta / 700));
+  scene.activeCamera?.updateProjectionMatrix?.();
 }
 
-function toggleRotation() {
-  state.rotate = !state.rotate;
-  delete state.start;
+function onClick() {
+  console.log('change', scene.activeCamera);
+  scene.activeCamera = scene.activeCamera === camera ? camera2 : camera;
 }
 
 const handlers = {
   main,
   size,
   newMap,
-  toggleRotation,
+  onClick,
   dragStart,
   drag,
   zoom,

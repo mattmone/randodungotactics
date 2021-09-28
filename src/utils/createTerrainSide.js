@@ -1,4 +1,4 @@
-import { oneOf } from './utils/oneOf.js';
+import { oneOf } from './oneOf.js';
 
 class TerrainColor {
   constructor(base) {
@@ -44,6 +44,7 @@ const terrain = {
   tree: new TerrainColor([20, 60, 10]),
   stump: new TerrainColor([60, 60, 20]),
   water: new TerrainColor([20, 20, 80]),
+  entry: { baseColor: 'rgb(100,100,100)', borderColor: ['rgb(20,20,20)'] },
 };
 
 const createdCanvii = {};
@@ -54,24 +55,33 @@ export const createTerrainSide = (type, sideTypes) => {
   const [textureWidth, textureHeight] = [256, 256];
   const canvas = new OffscreenCanvas(textureWidth, textureHeight);
   const context = canvas.getContext('2d');
-  const { baseColor, accentColors } = terrain[type];
+  const { baseColor, accentColors, borderColor } = terrain[type];
   context.fillStyle = baseColor;
   context.fillRect(0, 0, textureWidth, textureHeight);
-  const textureRectangles = Array(75)
-    .fill(0)
-    .map(() => Math.ceil((Math.random() * textureWidth) / 10) + textureWidth / 20);
-  for (let rectangle of textureRectangles) {
-    context.save();
-    const [x, y] = [
-      Math.min(textureWidth - rectangle, Math.max(rectangle, Math.random() * textureWidth)),
-      Math.min(textureHeight - rectangle, Math.max(rectangle, Math.random() * textureHeight)),
-    ];
-    context.translate(x, y);
-    context.rotate((Math.random() * 89 * Math.PI) / 180);
+  if (borderColor) {
+    context.fillStyle = borderColor;
+    context.fillRect(0, 0, textureWidth, textureHeight);
+    context.fillStyle = baseColor;
+    context.fillRect(2, 2, textureWidth - 4, textureHeight - 4);
+  }
+  if (accentColors) {
+    const textureRectangles = Array(75)
+      .fill(0)
+      .map(() => Math.ceil((Math.random() * textureWidth) / 10) + textureWidth / 20);
 
-    context.fillStyle = accentColors[Math.ceil(Math.random() * accentColors.length)];
-    context.fillRect(0, 0, rectangle, rectangle);
-    context.restore();
+    for (let rectangle of textureRectangles) {
+      context.save();
+      const [x, y] = [
+        Math.min(textureWidth - rectangle, Math.max(rectangle, Math.random() * textureWidth)),
+        Math.min(textureHeight - rectangle, Math.max(rectangle, Math.random() * textureHeight)),
+      ];
+      context.translate(x, y);
+      context.rotate((Math.random() * 89 * Math.PI) / 180);
+
+      context.fillStyle = accentColors[Math.ceil(Math.random() * accentColors.length)];
+      context.fillRect(0, 0, rectangle, rectangle);
+      context.restore();
+    }
   }
   createdCanvii[type].push(canvas);
   if (sideTypes)

@@ -155,12 +155,20 @@
       width: 100%;
       padding: 0;
     }
+    [hidden] {
+      display:none !important;
+    }
+    game-screen {
+      display:flex;
+    }
   </style>
   <script type="importmap">
   {
     "imports": {
       "lit-element": "https://unpkg.com/lit-dist/dist/lit.js",
+      "comlink": "https://cdn.skypack.dev/comlink",
       "utils/": "./src/utils/",
+      "constants/": "./src/constants/",
       "styles/": "./src/styles/"
     }
   }
@@ -175,10 +183,14 @@
     <button id='nameButton'>name</button>
     <button id='crewButton'>crew</button>
     <button id='jobButton'>take a job</button>
-    <side-screen>
+    <side-screen id='character-screen'>
       <character-content></character-content>
     </side-screen>
+    <side-screen id='jobs-screen'>
+      <jobs-content></jobs-content>
+    </side-screen>
   </div>
+  <game-screen hidden></game-screen>
 
 </body>
 

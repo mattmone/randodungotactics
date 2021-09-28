@@ -44,11 +44,11 @@ canvas.addEventListener(
   { passive: true },
 );
 
-// canvas.addEventListener('click', () => {
-//   worker.postMessage({
-//     type: 'toggleRotation',
-//   });
-// });
+canvas.addEventListener('click', () => {
+  worker.postMessage({
+    type: 'onClick',
+  });
+});
 
 document.querySelector('button').addEventListener('click', () => {
   worker.postMessage({
