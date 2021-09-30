@@ -1,4 +1,4 @@
-import { expose } from 'https://cdn.skypack.dev/comlink';
+import { expose } from '../../node_modules/comlink/dist/esm/comlink.js';
 import {
   Scene,
   OrthographicCamera,
@@ -9,15 +9,42 @@ import {
   Group,
   DirectionalLight,
   AmbientLight,
-  Raycaster,
   Vector2,
   Vector3,
   CanvasTexture,
-} from 'https://cdn.skypack.dev/three';
+  Raycaster,
+} from '../../node_modules/three/build/three.module.js';
 
 import { makeMap } from '../utils/makeMap.js';
 import { createTerrainSide } from '../utils/createTerrainSide.js';
 import { rollDice } from '../utils/rollDice.js';
+
+const characters = [
+  {
+    name: 'character 1',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff0000 })),
+  },
+  {
+    name: 'character 2',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ff00 })),
+  },
+  {
+    name: 'character 3',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x0000ff })),
+  },
+  {
+    name: 'character 4',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xffff00 })),
+  },
+  {
+    name: 'character 5',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff00ff })),
+  },
+  {
+    name: 'character 6',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ffff })),
+  },
+];
 
 class GameMap {
   constructor({ canvas }) {
@@ -35,6 +62,9 @@ class GameMap {
 
     this.directionalLight = new DirectionalLight(0xffffff, 1);
     this.directionalLight.position.set(0, 15, 0);
+
+    this.raycaster = new Raycaster();
+    this.mousePosition = new Vector2();
 
     this.scene.add(this.ambientLight);
     this.scene.add(this.directionalLight);
@@ -56,13 +86,17 @@ class GameMap {
     this.camera.right = d * this.aspect;
     this.camera.top = d;
     this.camera.bottom = -d;
-    this.camera.near = -50;
-    this.camera.far = 50;
+    this.camera.near = 0;
+    this.camera.far = 60;
     this.camera.updateProjectionMatrix();
   }
 
   setRotation({ dx }) {
     this.rotation = { dx: dx / 50 };
+  }
+
+  selectableCharacters() {
+    return characters.map(({ name, position }) => ({ name, position }));
   }
 
   generateMap({ type = 'largeRoad', width = 24, height = 12 }) {
@@ -162,6 +196,11 @@ class GameMap {
     else this.renderedMaps.push(group);
   }
 
+  mouseOver({ x, y }) {
+    this.mousePosition.x = (x / this.canvas.width) * 2 - 1;
+    this.mousePosition.y = -(y / this.canvas.height) * 2 + 1;
+  }
+
   async mapAvailable(index, entry) {
     return new Promise(resolve => {
       const interval = setInterval(() => {
@@ -171,7 +210,9 @@ class GameMap {
   }
 
   async mapSelection() {
-    return new Promise();
+    return new Promise(resolve => {
+      resolve();
+    });
   }
 
   async entryMap(index, mapType) {
@@ -179,10 +220,11 @@ class GameMap {
     this.map = this.entryMaps.splice(index, 1)[0];
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
-    this.camera.position.set(1, 1, 1);
+    this.camera.position.set(-24, 24, -24);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
     this.scene.add(this.map);
+    this.scene.updateMatrixWorld();
     return this.mapSelection();
   }
 
@@ -196,18 +238,51 @@ class GameMap {
       this.camera.zoom = 2;
       this.scene.position.y = -3;
     }
-    this.camera.position.set(1, 1, 1);
+    this.camera.position.set(-100, -100, -100);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
     this.scene.add(this.map);
   }
 
+  async mapClick() {
+    const { x, y, z } = this.intersectedObject.object.position;
+    return { x, y, z };
+  }
+
+  async placeCharacter(characterIndex, position) {
+    this.intersectedObject.object.children.forEach(child => child.removeFromParent());
+    const character = characters[characterIndex];
+    character.position = position;
+    const characterAtPosition = characters.find(
+      char =>
+        char !== character &&
+        char.position?.x === character.position.x &&
+        char.position?.y === character.position.y &&
+        char.position?.z === character.position.z,
+    );
+    if (characterAtPosition) characterAtPosition.position = null;
+    character.avatar.position.y = position.y + 0.75;
+    this.intersectedObject.object.add(character.avatar);
+  }
+
   render() {
-    // const rotation = (state.delta?.x || 0) / 50;
+    this.raycaster.setFromCamera(this.mousePosition, this.camera);
+    const [intersect] = this.raycaster.intersectObjects(this.map?.children || [], true);
+    if (intersect) {
+      if (this.intersectedObject && this.intersectedObject !== intersect) {
+        this.intersectedObject.object.material.map = this.intersectedObjectMaterial;
+      }
+      this.intersectedObject = intersect;
+      this.intersectedObjectMaterial = intersect.object.material.map;
+      intersect.object.material.map = new CanvasTexture(createTerrainSide('highlight'));
+    } else if (this.intersectedObject) {
+      this.intersectedObject.object.material.map = this.intersectedObjectMaterial;
+      this.intersectedObject = false;
+      this.intersectedObjectMaterial = false;
+    }
     if (this.map) this.map.rotation.y = this.rotation?.dx || 0;
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(time => this.render(time));
   }
 }
-
 expose(GameMap);

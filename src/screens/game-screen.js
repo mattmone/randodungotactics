@@ -49,33 +49,70 @@ class GameScreen extends LitElement {
 
   async selectMap(mapIndex, mapType) {
     await this.gameMap.entryMap(mapIndex, mapType);
-    this.gameMap.loadMap(mapIndex, mapType);
+    // this.gameMap.loadMap(mapIndex, mapType);
   }
 
-  startRotation({ x, y }) {
+  pointerDown({ x, y }) {
     this.rotation.start = { x, y };
+    this._pointerDown = new Date();
     if (this.rotation?.delta) {
       this.rotation.start.x -= this.rotation.delta.dx;
     }
   }
 
-  rotate(event) {
+  pointerMove(event) {
     const { buttons, x, y } = event;
+    this.gameMap.mouseOver({ x, y });
     if (buttons === 1) {
       event.preventDefault();
-      this.rotation.delta = { dx: -(this.rotation.start.x - x) };
-      this.gameMap.setRotation(this.rotation.delta);
+      const dx = -(this.rotation.start.x - x);
+      if (Math.abs(dx) > 10) this._moving = true;
+      this.rotation.delta = { dx };
+      if (new Date() - this._pointerDown > 100) this.gameMap.setRotation(this.rotation.delta);
     }
+  }
+
+  pointerUp() {
+    if (new Date() - this._pointerDown > 100) this.nonClick = true;
+  }
+
+  async chooseCharacter() {
+    return new Promise(async (resolve, reject) => {
+      await import('./character-selection.js');
+      const characterSelection = this.shadowRoot.querySelector('character-selection');
+      const characters = await this.gameMap.selectableCharacters();
+      console.log(characters);
+      characterSelection.characters = characters;
+      characterSelection.show();
+      characterSelection.addEventListener('character-selected', ({ detail: character }) => {
+        characterSelection.hide();
+        resolve(characters.indexOf(character));
+      });
+      characterSelection.addEventListener('selection-cancelled', () => {
+        characterSelection.hide();
+        reject();
+      });
+    });
+  }
+
+  async click() {
+    if (this.nonClick) return (this.nonClick = false);
+    const clickPosition = await this.gameMap.mapClick();
+    const character = await this.chooseCharacter();
+    this.gameMap.placeCharacter(character, clickPosition);
   }
 
   render() {
     return html`<canvas
-      id="render"
-      width=${this.screenWidth}
-      height=${this.screenHeight}
-      @pointerdown=${this.startRotation}
-      @pointermove=${this.rotate}
-    ></canvas>`;
+        id="render"
+        width=${this.screenWidth}
+        height=${this.screenHeight}
+        @pointerdown=${this.pointerDown}
+        @pointermove=${this.pointerMove}
+        @pointerup=${this.pointerUp}
+        @click=${this.click}
+      ></canvas>
+      <character-selection hidden></character-selection>`;
   }
 }
 customElements.define('game-screen', GameScreen);

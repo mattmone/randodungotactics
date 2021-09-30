@@ -45,6 +45,7 @@ const terrain = {
   stump: new TerrainColor([60, 60, 20]),
   water: new TerrainColor([20, 20, 80]),
   entry: { baseColor: 'rgb(100,100,100)', borderColor: ['rgb(20,20,20)'] },
+  highlight: { baseColor: 'rgb(200,200,100)', borderColor: ['rgb(20,20,20)'] },
 };
 
 const createdCanvii = {};
