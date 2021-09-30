@@ -22,6 +22,7 @@
     "@web/dev-server": "^0.1.22"
   },
   "dependencies": {
+    "comlink": "^4.3.1",
     "three": "^0.132.2"
   }
 }
