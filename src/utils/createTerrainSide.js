@@ -43,7 +43,7 @@ const terrain = {
   rock: new TerrainColor([40, 40, 40]),
   tree: new TerrainColor([20, 60, 10]),
   stump: new TerrainColor([60, 60, 20]),
-  water: new TerrainColor([20, 20, 80]),
+  water: new TerrainColor([60, 60, 120]),
   entry: { baseColor: 'rgb(100,100,100)', borderColor: ['rgb(20,20,20)'] },
   highlight: { baseColor: 'rgb(200,200,100)', borderColor: ['rgb(20,20,20)'] },
 };

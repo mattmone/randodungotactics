@@ -5,6 +5,7 @@ import {
   WebGLRenderer,
   BoxGeometry,
   MeshStandardMaterial,
+  MeshBasicMaterial,
   Mesh,
   Group,
   DirectionalLight,
@@ -18,40 +19,159 @@ import {
 import { makeMap } from '../utils/makeMap.js';
 import { createTerrainSide } from '../utils/createTerrainSide.js';
 import { rollDice } from '../utils/rollDice.js';
+import { oneOf } from '../utils/oneOf.js';
 
 const characters = [
   {
     name: 'character 1',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff0000 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:red"/></svg>',
   },
   {
     name: 'character 2',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ff00 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:green"/></svg>',
   },
   {
     name: 'character 3',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x0000ff })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:blue"/></svg>',
   },
   {
     name: 'character 4',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xffff00 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:yellow"/></svg>',
   },
   {
     name: 'character 5',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff00ff })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:purple"/></svg>',
   },
   {
     name: 'character 6',
     avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ffff })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:cyan"/></svg>',
   },
 ];
 
+const enemies = [
+  {
+    name: 'enemy 1',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x440000 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,0,0)"/></svg>',
+  },
+  {
+    name: 'enemy 2',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x004400 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(0,60,0)"/></svg>',
+  },
+  {
+    name: 'enemy 3',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x000044 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(0,0,60)"/></svg>',
+  },
+  {
+    name: 'enemy 4',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x444400 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,60,0)"/></svg>',
+  },
+  {
+    name: 'enemy 5',
+    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x440044 })),
+    stats: {
+      strength: Math.floor(Math.random() * 10),
+      dexterity: Math.floor(Math.random() * 10),
+      speed: Math.floor(Math.random() * 10),
+      magic: Math.floor(Math.random() * 10),
+    },
+    avatarImage:
+      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,0,60)"/></svg>',
+  },
+];
+
+const positionEquals = (position1, position2) => {
+  return position1?.x === position2?.x && position1?.z === position2?.z;
+};
+
 class GameMap {
+  placedCharacters = [];
+  queuedMaps = [];
+  maps = [];
+  renderedMaps = [];
+  entryMaps = [];
+
   constructor({ canvas }) {
     this.canvas = canvas;
-    this.maps = [];
-    this.renderedMaps = [];
-    this.entryMaps = [];
     this.scene = new Scene();
     this.scene.position.y = -1;
     this.aspect = canvas.width / canvas.height;
@@ -96,26 +216,29 @@ class GameMap {
   }
 
   selectableCharacters() {
-    return characters.map(({ name, position }) => ({ name, position }));
+    return characters.map(({ name, position, avatarImage }) => ({ name, position, avatarImage }));
   }
 
   generateMap({ type = 'largeRoad', width = 24, height = 12 }) {
     const map = makeMap({ type, width, height });
     this.maps.push(map);
-    this.renderMap(map, true);
-    this.renderMap(map);
+    const mapName = `map-${Math.floor(Math.random() * 100000)}`;
+    this.renderMap(map, { characterPlacement: true, mapName });
+    this.renderMap(map, { mapName });
     return map;
   }
 
-  async renderMap(map, characterPlacement) {
-    const boxGeometry = new BoxGeometry();
+  async renderMap(map, { characterPlacement, mapName }) {
     const group = new Group();
     let xPosition = -map[0].length / 2;
     let zPosition = -map.length / 2;
 
     for (let column of map) {
       for (let pixel of column) {
-        if (characterPlacement && !pixel.entry) continue;
+        if (characterPlacement && !pixel.entry) {
+          xPosition += 1;
+          continue;
+        }
         if (pixel.tree) {
           let layers = rollDice(4);
           const textureCanvas = createTerrainSide('stump');
@@ -166,10 +289,12 @@ class GameMap {
           rockCube.position.set(xPosition, pixel.elevation + 0.5, zPosition);
           group.add(rockCube);
         }
-        const textureCanvas = createTerrainSide(pixel.entry ? 'entry' : pixel.texture);
+        const textureCanvas = createTerrainSide(characterPlacement ? 'entry' : pixel.texture);
         const texture = new CanvasTexture(textureCanvas);
 
-        const boxMaterial = new MeshStandardMaterial({
+        const boxMaterial = new (
+          pixel.texture === 'water' ? MeshBasicMaterial : MeshStandardMaterial
+        )({
           map: texture,
         });
         const cube = new Mesh(
@@ -185,13 +310,14 @@ class GameMap {
           0.5 * (pixel.texture === 'water' ? pixel.elevation - 0.5 : pixel.elevation),
           zPosition,
         );
+        cube.userData = { ...pixel };
         group.add(cube);
         xPosition += 1;
       }
       zPosition += 1;
       xPosition = -map[0].length / 2;
     }
-    group.name = 'map';
+    group.name = mapName;
     if (characterPlacement) this.entryMaps.push(group);
     else this.renderedMaps.push(group);
   }
@@ -220,17 +346,38 @@ class GameMap {
     this.map = this.entryMaps.splice(index, 1)[0];
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
+    if (mapType === 'mountain') {
+      this.camera.zoom = 2;
+      this.scene.position.y = -3;
+    }
     this.camera.position.set(-24, 24, -24);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
     this.scene.add(this.map);
-    this.scene.updateMatrixWorld();
     return this.mapSelection();
   }
 
   async loadMap(index, mapType) {
     await this.mapAvailable(index);
+    this.map.removeFromParent();
     this.map = this.renderedMaps.splice(index, 1)[0];
+
+    const enemyTiles = this.map.children.filter(tile => tile.userData.enemy);
+    enemies.forEach(enemy => {
+      const placementTile = oneOf(enemyTiles);
+      placementTile.add(enemy.avatar);
+      enemy.avatar.position.y =
+        enemy.avatar.geometry.parameters.height * 0.5 +
+        placementTile.geometry.parameters.height * 0.5;
+    });
+
+    this.map.children.forEach(tile => {
+      const characterAtPosition = this.placedCharacters.find(character =>
+        positionEquals(tile.position, character.position),
+      );
+      if (!characterAtPosition) return;
+      this.placeCharacter({ character: characterAtPosition }, tile.position, tile);
+    });
     this.mapType = mapType;
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
@@ -238,31 +385,35 @@ class GameMap {
       this.camera.zoom = 2;
       this.scene.position.y = -3;
     }
-    this.camera.position.set(-100, -100, -100);
+    this.camera.position.set(-24, 24, -24);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
     this.scene.add(this.map);
   }
 
   async mapClick() {
-    const { x, y, z } = this.intersectedObject.object.position;
+    const { x, y, z } = this.intersectedObject.position;
     return { x, y, z };
   }
 
-  async placeCharacter(characterIndex, position) {
-    this.intersectedObject.object.children.forEach(child => child.removeFromParent());
-    const character = characters[characterIndex];
-    character.position = position;
+  async placeCharacter(
+    { character, characterIndex },
+    position,
+    placement = this.intersectedObject,
+  ) {
+    placement.children.forEach(child => child.removeFromParent());
+    if (!character) character = characters[characterIndex];
+    character.avatar.childOf = placement;
+    character.position = { ...placement.position };
     const characterAtPosition = characters.find(
-      char =>
-        char !== character &&
-        char.position?.x === character.position.x &&
-        char.position?.y === character.position.y &&
-        char.position?.z === character.position.z,
+      char => char !== character && positionEquals(char.position, character.position),
     );
     if (characterAtPosition) characterAtPosition.position = null;
-    character.avatar.position.y = position.y + 0.75;
-    this.intersectedObject.object.add(character.avatar);
+    character.avatar.position.y =
+      character.avatar.geometry.parameters.height * 0.5 +
+      placement.geometry.parameters.height * 0.5;
+    placement.add(character.avatar);
+    this.placedCharacters.push(character);
   }
 
   render() {
@@ -270,13 +421,13 @@ class GameMap {
     const [intersect] = this.raycaster.intersectObjects(this.map?.children || [], true);
     if (intersect) {
       if (this.intersectedObject && this.intersectedObject !== intersect) {
-        this.intersectedObject.object.material.map = this.intersectedObjectMaterial;
+        this.intersectedObject.material.map = this.intersectedObjectMaterial;
       }
-      this.intersectedObject = intersect;
-      this.intersectedObjectMaterial = intersect.object.material.map;
-      intersect.object.material.map = new CanvasTexture(createTerrainSide('highlight'));
+      this.intersectedObject = intersect.object.childOf || intersect.object;
+      this.intersectedObjectMaterial = this.intersectedObject.material.map;
+      this.intersectedObject.material.map = new CanvasTexture(createTerrainSide('highlight'));
     } else if (this.intersectedObject) {
-      this.intersectedObject.object.material.map = this.intersectedObjectMaterial;
+      this.intersectedObject.material.map = this.intersectedObjectMaterial;
       this.intersectedObject = false;
       this.intersectedObjectMaterial = false;
     }

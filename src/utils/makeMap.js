@@ -339,15 +339,22 @@ function buildMap(
           ) &&
         pixelIndex <
           Math.max(2, starting + amplitude * curve(stripeIndex / frequency) + pathWidth / 2)
-      )
+      ) {
+        const entry =
+          pathTexture !== 'water' &&
+          ((entranceDirection && stripeIndex <= 3) ||
+            (!entranceDirection && stripeIndex >= map.length - 4));
+        const enemy =
+          pathTexture !== 'water' &&
+          ((!entranceDirection && stripeIndex <= 3) ||
+            (entranceDirection && stripeIndex >= map.length - 4));
         return {
           elevation: (averagedPath ? pixelAverage : pixel) + slantElevation,
           texture: pathTexture,
-          entry:
-            pathTexture !== 'water' &&
-            ((entranceDirection && stripeIndex <= 3) ||
-              (!entranceDirection && stripeIndex >= map.length - 4)),
+          entry,
+          enemy,
         };
+      }
       const elevation = pixel + slantElevation;
       const tree =
         Math.random() < (typeof treeChance === 'function' ? treeChance(elevation) : treeChance);
@@ -359,12 +366,18 @@ function buildMap(
         !tree &&
         ((entranceDirection && stripeIndex <= 3) ||
           (!entranceDirection && stripeIndex >= map.length - 4));
+      const enemy =
+        !rock &&
+        !tree &&
+        ((!entranceDirection && stripeIndex <= 3) ||
+          (entranceDirection && stripeIndex >= map.length - 4));
       return {
         elevation,
         texture: typeof baseTexture === 'function' ? baseTexture(elevation) : baseTexture,
         rock,
         tree,
         entry,
+        enemy,
       };
     });
   });

@@ -1,11 +1,31 @@
 import { LitElement, html, css } from 'lit-element';
+import { buttonStyles } from 'styles/button.styles.js';
+import { commonStyles } from 'styles/common.styles.js';
 import { wrap, transfer } from 'comlink';
 
 class GameScreen extends LitElement {
+  static get styles() {
+    return [
+      commonStyles,
+      buttonStyles,
+      css`
+        #commence {
+          position: fixed;
+          bottom: 1em;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 8px 16px;
+        }
+      `,
+    ];
+  }
+
   static get properties() {
     return {
       screenWidth: Number,
       screenHeight: Number,
+      commenceActive: { type: Boolean, state: true },
+      commenced: { type: Boolean, state: true },
     };
   }
 
@@ -48,8 +68,9 @@ class GameScreen extends LitElement {
   }
 
   async selectMap(mapIndex, mapType) {
-    await this.gameMap.entryMap(mapIndex, mapType);
-    // this.gameMap.loadMap(mapIndex, mapType);
+    this.gameMap.entryMap(mapIndex, mapType);
+    this.mapIndex = mapIndex;
+    this.mapType = mapType;
   }
 
   pointerDown({ x, y }) {
@@ -81,12 +102,12 @@ class GameScreen extends LitElement {
       await import('./character-selection.js');
       const characterSelection = this.shadowRoot.querySelector('character-selection');
       const characters = await this.gameMap.selectableCharacters();
-      console.log(characters);
       characterSelection.characters = characters;
       characterSelection.show();
       characterSelection.addEventListener('character-selected', ({ detail: character }) => {
         characterSelection.hide();
         resolve(characters.indexOf(character));
+        this.commenceActive = true;
       });
       characterSelection.addEventListener('selection-cancelled', () => {
         characterSelection.hide();
@@ -95,11 +116,18 @@ class GameScreen extends LitElement {
     });
   }
 
-  async click() {
+  async canvasClick() {
     if (this.nonClick) return (this.nonClick = false);
     const clickPosition = await this.gameMap.mapClick();
-    const character = await this.chooseCharacter();
-    this.gameMap.placeCharacter(character, clickPosition);
+    const characterIndex = await this.chooseCharacter().catch(() => null);
+    if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex }, clickPosition);
+  }
+
+  async commence() {
+    this.gameMap.loadMap(this.mapIndex, this.mapType);
+    delete this.mapIndex;
+    delete this.mapType;
+    this.commenced = true;
   }
 
   render() {
@@ -110,9 +138,17 @@ class GameScreen extends LitElement {
         @pointerdown=${this.pointerDown}
         @pointermove=${this.pointerMove}
         @pointerup=${this.pointerUp}
-        @click=${this.click}
+        @click=${this.canvasClick}
       ></canvas>
-      <character-selection hidden></character-selection>`;
+      <character-selection hidden></character-selection>
+      <button
+        id="commence"
+        ?hidden=${this.commenced}
+        ?disabled=${!this.commenceActive}
+        @click=${this.commence}
+      >
+        Commence
+      </button>`;
   }
 }
 customElements.define('game-screen', GameScreen);

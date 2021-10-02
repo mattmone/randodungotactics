@@ -27,22 +27,38 @@ class CharacterSelection extends LitElement {
           border-radius: 8px;
           width: 70vw;
           padding: 8px;
+          gap: 8px;
         }
         header {
           color: white;
           font-size: 24px;
           font-family: VT323;
-          margin-bottom: 8px;
         }
         #selection {
           display: grid;
           grid-template-columns: repeat(auto-fit, 10vw);
+          gap: 8px;
         }
         button {
           justify-content: center;
+          flex-direction: column;
         }
-        button[positioned]:after {
-          content: 'p';
+        button img {
+          max-width: 100%;
+          aspect-ratio: 1 / 1;
+        }
+        #cancel {
+          align-self: flex-end;
+          padding: 8px 16px;
+        }
+        .remove {
+          position: absolute;
+          display: grid;
+          place-items: center;
+          height: 44px;
+          width: 44px;
+          top: 0;
+          right: 0;
         }
       `,
     ];
@@ -78,11 +94,13 @@ class CharacterSelection extends LitElement {
               @click=${() =>
                 this.dispatchEvent(new CustomEvent('character-selected', { detail: character }))}
             >
-              ${character.name}
+              <img src=${character.avatarImage} />
+              <span>${character.name}</span>
+              ${character.position && html`<button class="remove">x</button>`}
             </button>`,
         )}
       </div>
-      <button @click=${this.cancel}>Cancel</button>
+      <button id="cancel" @click=${this.cancel}>Cancel</button>
     </section>`;
   }
 }
