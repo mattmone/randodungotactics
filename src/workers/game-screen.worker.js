@@ -14,154 +14,43 @@ import {
   Vector3,
   CanvasTexture,
   Raycaster,
+  AnimationMixer,
+  VectorKeyframeTrack,
+  AnimationClip,
+  Clock,
+  LoopOnce,
+  Quaternion,
+  Object3D,
 } from '../../node_modules/three/build/three.module.js';
 
 import { makeMap } from '../utils/makeMap.js';
 import { createTerrainSide } from '../utils/createTerrainSide.js';
 import { rollDice } from '../utils/rollDice.js';
 import { oneOf } from '../utils/oneOf.js';
+import { Character } from '../character.js';
+import { randomCharacter } from '../utils/randomCharacter.js';
 
-const characters = [
-  {
-    name: 'character 1',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff0000 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:red"/></svg>',
-  },
-  {
-    name: 'character 2',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ff00 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:green"/></svg>',
-  },
-  {
-    name: 'character 3',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x0000ff })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:blue"/></svg>',
-  },
-  {
-    name: 'character 4',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xffff00 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:yellow"/></svg>',
-  },
-  {
-    name: 'character 5',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0xff00ff })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:purple"/></svg>',
-  },
-  {
-    name: 'character 6',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x00ffff })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:cyan"/></svg>',
-  },
-];
+const characters = new Array(7)
+  .fill(0)
+  .map(() =>
+    randomCharacter(new Character('', new Mesh(new BoxGeometry(), new MeshStandardMaterial()))),
+  );
 
-const enemies = [
-  {
-    name: 'enemy 1',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x440000 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,0,0)"/></svg>',
-  },
-  {
-    name: 'enemy 2',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x004400 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(0,60,0)"/></svg>',
-  },
-  {
-    name: 'enemy 3',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x000044 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(0,0,60)"/></svg>',
-  },
-  {
-    name: 'enemy 4',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x444400 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,60,0)"/></svg>',
-  },
-  {
-    name: 'enemy 5',
-    avatar: new Mesh(new BoxGeometry(), new MeshStandardMaterial({ color: 0x440044 })),
-    stats: {
-      strength: Math.floor(Math.random() * 10),
-      dexterity: Math.floor(Math.random() * 10),
-      speed: Math.floor(Math.random() * 10),
-      magic: Math.floor(Math.random() * 10),
-    },
-    avatarImage:
-      'data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:rgb(60,0,60)"/></svg>',
-  },
-];
+const enemies = new Array(5)
+  .fill(0)
+  .map(() =>
+    randomCharacter(new Character('', new Mesh(new BoxGeometry(), new MeshStandardMaterial()))),
+  );
 
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
 };
+
+/**
+ * A GameMap
+ * @typedef {Object} GameMap
+ * @property {Array} animationsObjects
+ */
 
 class GameMap {
   placedCharacters = [];
@@ -169,6 +58,7 @@ class GameMap {
   maps = [];
   renderedMaps = [];
   entryMaps = [];
+  animationsObjects = [];
 
   constructor({ canvas }) {
     this.canvas = canvas;
@@ -188,6 +78,8 @@ class GameMap {
 
     this.scene.add(this.ambientLight);
     this.scene.add(this.directionalLight);
+    this.focalPoint = new Object3D();
+    this.scene.add(this.focalPoint);
 
     this.renderer = new WebGLRenderer({ canvas });
     this.renderer.setSize(canvas.width, canvas.height, false);
@@ -346,14 +238,15 @@ class GameMap {
     this.map = this.entryMaps.splice(index, 1)[0];
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
+    this.focalPoint.position.y = 0;
     if (mapType === 'mountain') {
       this.camera.zoom = 2;
-      this.scene.position.y = -3;
+      this.focalPoint.position.y = -3;
     }
     this.camera.position.set(-24, 24, -24);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
-    this.scene.add(this.map);
+    this.focalPoint.add(this.map);
     return this.mapSelection();
   }
 
@@ -365,10 +258,7 @@ class GameMap {
     const enemyTiles = this.map.children.filter(tile => tile.userData.enemy);
     enemies.forEach(enemy => {
       const placementTile = oneOf(enemyTiles);
-      placementTile.add(enemy.avatar);
-      enemy.avatar.position.y =
-        enemy.avatar.geometry.parameters.height * 0.5 +
-        placementTile.geometry.parameters.height * 0.5;
+      this.placeCharacter({ character: enemy }, placementTile);
     });
 
     this.map.children.forEach(tile => {
@@ -376,31 +266,74 @@ class GameMap {
         positionEquals(tile.position, character.position),
       );
       if (!characterAtPosition) return;
-      this.placeCharacter({ character: characterAtPosition }, tile.position, tile);
+      this.placeCharacter({ character: characterAtPosition }, tile);
     });
     this.mapType = mapType;
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
+    this.focalPoint.y = 0;
     if (this.mapType === 'mountain') {
       this.camera.zoom = 2;
-      this.scene.position.y = -3;
+      this.focalPoint.y = -3;
     }
     this.camera.position.set(-24, 24, -24);
     this.camera.lookAt(this.map.position);
     this.camera.updateProjectionMatrix();
-    this.scene.add(this.map);
+    this.focalPoint.add(this.map);
+  }
+
+  async startBattle() {
+    this.participants = [...this.placedCharacters, ...enemies].sort(
+      ({ stats: { speed: speed1 } }, { stats: { speed: speed2 } }) =>
+        speed1 === speed2 ? 0 : speed1 < speed2 ? 1 : -1,
+    );
+    this.timer = 0;
+    this.currentParticipant = this.participants[0];
+    this.focus();
+  }
+
+  focus(position = this.currentParticipant.position) {
+    console.log('focusing', this.currentParticipant, position);
+    this.createMoveAnimation({ endPosition: position });
+  }
+
+  createMoveAnimation({ mesh = this.map, startPosition = this.map.position, endPosition }) {
+    mesh.userData.mixer = new AnimationMixer(mesh);
+    const rotatedEndPointVector = new Vector3(-endPosition.x, startPosition.y, -endPosition.z);
+    const track = new VectorKeyframeTrack(
+      '.position',
+      [0, 1],
+      [startPosition.x, startPosition.y, startPosition.z, ...rotatedEndPointVector.toArray()],
+    );
+    const animationClip = new AnimationClip(null, 3, [track]);
+    const animationAction = mesh.userData.mixer.clipAction(animationClip);
+    animationAction.play();
+    mesh.userData.clock = new Clock();
+    this.animationsObjects.push(mesh);
+    mesh.userData.mixer.addEventListener('loop', () => {
+      console.log('removing', mesh.position);
+      requestAnimationFrame(() => {
+        mesh.position.set(...rotatedEndPointVector.toArray());
+      });
+      console.log(mesh.position);
+      delete mesh.userData.mixer;
+      delete mesh.userData.clock;
+      this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
+    });
   }
 
   async mapClick() {
     const { x, y, z } = this.intersectedObject.position;
-    return { x, y, z };
+    const clickPosition = { x, y, z };
+    const selectedParticipant = this.participants?.find?.(({ position }) =>
+      positionEquals(position, clickPosition),
+    )?.passable;
+    console.log(selectedParticipant);
+    if (selectedParticipant) this.focus(selectedParticipant.position);
+    return { clickPosition, selectedParticipant };
   }
 
-  async placeCharacter(
-    { character, characterIndex },
-    position,
-    placement = this.intersectedObject,
-  ) {
+  async placeCharacter({ character, characterIndex }, placement = this.intersectedObject) {
     placement.children.forEach(child => child.removeFromParent());
     if (!character) character = characters[characterIndex];
     character.avatar.childOf = placement;
@@ -431,8 +364,13 @@ class GameMap {
       this.intersectedObject = false;
       this.intersectedObjectMaterial = false;
     }
-    if (this.map) this.map.rotation.y = this.rotation?.dx || 0;
+    if (this.focalPoint) this.focalPoint.rotation.y = this.rotation?.dx || 0;
     this.renderer.render(this.scene, this.camera);
+    this.animationsObjects.forEach(mesh => {
+      if (mesh.userData.clock && mesh.userData.mixer) {
+        mesh.userData.mixer.update(mesh.userData.clock.getDelta());
+      }
+    });
     requestAnimationFrame(time => this.render(time));
   }
 }

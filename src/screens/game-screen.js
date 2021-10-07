@@ -118,16 +118,20 @@ class GameScreen extends LitElement {
 
   async canvasClick() {
     if (this.nonClick) return (this.nonClick = false);
-    const clickPosition = await this.gameMap.mapClick();
-    const characterIndex = await this.chooseCharacter().catch(() => null);
-    if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex }, clickPosition);
+    const { clickPosition, selectedParticipant } = await this.gameMap.mapClick();
+    if (!this.commenced) {
+      const characterIndex = await this.chooseCharacter().catch(() => null);
+      if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex });
+      return;
+    }
   }
 
   async commence() {
-    this.gameMap.loadMap(this.mapIndex, this.mapType);
+    await this.gameMap.loadMap(this.mapIndex, this.mapType);
     delete this.mapIndex;
     delete this.mapType;
     this.commenced = true;
+    this.gameMap.startBattle();
   }
 
   render() {

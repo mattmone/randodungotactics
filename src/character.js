@@ -1,14 +1,19 @@
-import { DIRECTION } from 'constants/directions.js';
+// import { DIRECTION } from '../constants/directions.js';
 
 export class Character {
-  constructor(name) {
+  constructor(name, avatar) {
     this.name = name;
-    this.avatar = {};
+    this.avatar = avatar;
     this.stats = {};
     this.skills = {};
-    this.position = {};
+    this.position = false;
     this.effects = {};
     this.modifiers = {};
-    this.direction = DIRECTION.NORTH;
+    // this.direction = DIRECTION.NORTH;
+  }
+
+  get passable() {
+    const { name, stats, skills, position, effects, modifiers } = this;
+    return { name, stats, skills, position, effects, modifiers };
   }
 }
