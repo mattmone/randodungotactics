@@ -251,10 +251,13 @@ export function randomCharacter(character) {
     '',
   )}"/></svg>`;
   character.stats = {
-    strength: Math.floor(Math.random() * 10),
-    dexterity: Math.floor(Math.random() * 10),
-    speed: Math.floor(Math.random() * 10),
-    magic: Math.floor(Math.random() * 10),
+    strength: Math.ceil(Math.random() * 10),
+    constitution: Math.ceil(Math.random() * 10),
+    dexterity: Math.ceil(Math.random() * 10),
+    speed: Math.ceil(Math.random() * 10),
+    intellect: Math.ceil(Math.random() * 10),
+    magic: Math.ceil(Math.random() * 10),
   };
+  character.setup();
   return character;
 }

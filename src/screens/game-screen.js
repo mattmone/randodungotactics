@@ -22,10 +22,11 @@ class GameScreen extends LitElement {
 
   static get properties() {
     return {
-      screenWidth: Number,
-      screenHeight: Number,
+      screenWidth: { type: Number },
+      screenHeight: { type: Number },
       commenceActive: { type: Boolean, state: true },
       commenced: { type: Boolean, state: true },
+      currentParticipant: { type: Object },
     };
   }
 
@@ -56,6 +57,9 @@ class GameScreen extends LitElement {
         type: 'module',
       }),
     );
+    /**
+     * @type {GameMap}
+     */
     this.gameMap = await new GameMap(transfer({ canvas: offscreen }, [offscreen]));
     this.resizeObserver = new ResizeObserver(() => {
       this.gameMap.setSize(window.innerWidth, window.innerHeight);
@@ -131,7 +135,19 @@ class GameScreen extends LitElement {
     delete this.mapIndex;
     delete this.mapType;
     this.commenced = true;
-    this.gameMap.startBattle();
+    this.currentParticipant = await this.gameMap.startBattle();
+    await import('./current-turn.js');
+    this.currentTurnScreen = this.shadowRoot.querySelector('current-turn');
+    this.currentTurnScreen.toggleAttribute('hidden', false);
+  }
+
+  async startMove() {
+    this.gameMap?.initiateMove();
+  }
+  async waitTurn() {
+    console.log('wait turn');
+    this.currentParticipant = await this.gameMap.endTurn();
+    console.log(this.currentParticipant);
   }
 
   render() {
@@ -145,6 +161,12 @@ class GameScreen extends LitElement {
         @click=${this.canvasClick}
       ></canvas>
       <character-selection hidden></character-selection>
+      <current-turn
+        hidden
+        .currentParticipant=${this.currentParticipant}
+        @start-move=${this.startMove}
+        @wait-turn=${this.waitTurn}
+      ></current-turn>
       <button
         id="commence"
         ?hidden=${this.commenced}

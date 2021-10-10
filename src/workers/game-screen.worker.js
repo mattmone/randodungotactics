@@ -46,24 +46,53 @@ const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
 };
 
-/**
- * A GameMap
- * @typedef {Object} GameMap
- * @property {Array} animationsObjects
- */
-
+function turnSort(participant1, participant2) {
+  let sort = 0;
+  if (participant1.stats.dexterity < participant2.stats.dexterity) sort = 1;
+  if (participant1.stats.dexterity > participant2.stats.dexterity) sort = -1;
+  if (participant1.stats.speed < participant2.stats.speed) sort = 1;
+  if (participant1.stats.speed > participant2.stats.speed) sort = -1;
+  if (participant1.nextMove > participant2.nextMove) sort = 1;
+  if (participant1.nextMove < participant2.nextMove) sort = -1;
+  return sort;
+}
+/** Class representing the game map */
 class GameMap {
-  placedCharacters = [];
-  queuedMaps = [];
+  /**
+   * @type {Character[]}
+   */
+  placedCharacters = new Set();
+  /**
+   * @type {Group[]}
+   */
   maps = [];
+  /**
+   * @type {Group[]}
+   */
   renderedMaps = [];
+  /**
+   * @type {Group[]}
+   */
   entryMaps = [];
+  /**
+   * @type {Mesh[]}
+   */
   animationsObjects = [];
 
+  /**
+   * instantiate the GameMap
+   * @param {Object} params the game scene
+   */
   constructor({ canvas }) {
+    /**
+     * @type {Canvas}
+     */
     this.canvas = canvas;
     this.scene = new Scene();
     this.scene.position.y = -1;
+    /**
+     * @type {Number}
+     */
     this.aspect = canvas.width / canvas.height;
     const d = 70;
     this.camera = new OrthographicCamera(-d * this.aspect, d * this.aspect, d, -d, 1, 1000);
@@ -258,11 +287,11 @@ class GameMap {
     const enemyTiles = this.map.children.filter(tile => tile.userData.enemy);
     enemies.forEach(enemy => {
       const placementTile = oneOf(enemyTiles);
-      this.placeCharacter({ character: enemy }, placementTile);
+      this.placeCharacter({ character: enemy }, placementTile, true);
     });
 
     this.map.children.forEach(tile => {
-      const characterAtPosition = this.placedCharacters.find(character =>
+      const characterAtPosition = Array.from(this.placedCharacters).find(character =>
         positionEquals(tile.position, character.position),
       );
       if (!characterAtPosition) return;
@@ -283,39 +312,48 @@ class GameMap {
   }
 
   async startBattle() {
-    this.participants = [...this.placedCharacters, ...enemies].sort(
-      ({ stats: { speed: speed1 } }, { stats: { speed: speed2 } }) =>
-        speed1 === speed2 ? 0 : speed1 < speed2 ? 1 : -1,
-    );
+    this.participants = [...this.placedCharacters, ...enemies].sort(turnSort);
     this.timer = 0;
     this.currentParticipant = this.participants[0];
     this.focus();
+    return this.currentParticipant.passable;
   }
 
   focus(position = this.currentParticipant.position) {
-    console.log('focusing', this.currentParticipant, position);
     this.createMoveAnimation({ endPosition: position });
+  }
+
+  initiateMove() {}
+
+  endTurn() {
+    this.currentParticipant.nextMove =
+      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.speed);
+    this.participants.sort(turnSort);
+    console.log(this.participants);
+    this.currentParticipant = this.participants[0];
+    this.currentTime = this.currentParticipant.nextMove;
+    this.focus();
+    return this.currentParticipant.passable;
   }
 
   createMoveAnimation({ mesh = this.map, startPosition = this.map.position, endPosition }) {
     mesh.userData.mixer = new AnimationMixer(mesh);
-    const rotatedEndPointVector = new Vector3(-endPosition.x, startPosition.y, -endPosition.z);
+    const endPointVector = new Vector3(-endPosition.x, startPosition.y, -endPosition.z);
+    const animationTiming = 0.3;
     const track = new VectorKeyframeTrack(
       '.position',
-      [0, 1],
-      [startPosition.x, startPosition.y, startPosition.z, ...rotatedEndPointVector.toArray()],
+      [0, animationTiming],
+      [startPosition.x, startPosition.y, startPosition.z, ...endPointVector.toArray()],
     );
-    const animationClip = new AnimationClip(null, 3, [track]);
+    const animationClip = new AnimationClip(null, -1, [track]);
     const animationAction = mesh.userData.mixer.clipAction(animationClip);
     animationAction.play();
     mesh.userData.clock = new Clock();
     this.animationsObjects.push(mesh);
     mesh.userData.mixer.addEventListener('loop', () => {
-      console.log('removing', mesh.position);
       requestAnimationFrame(() => {
-        mesh.position.set(...rotatedEndPointVector.toArray());
+        mesh.position.set(...endPointVector.toArray());
       });
-      console.log(mesh.position);
       delete mesh.userData.mixer;
       delete mesh.userData.clock;
       this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
@@ -328,12 +366,12 @@ class GameMap {
     const selectedParticipant = this.participants?.find?.(({ position }) =>
       positionEquals(position, clickPosition),
     )?.passable;
-    console.log(selectedParticipant);
-    if (selectedParticipant) this.focus(selectedParticipant.position);
+    if (selectedParticipant || this.currentParticipant)
+      this.focus((selectedParticipant || this.currentParticipant).position);
     return { clickPosition, selectedParticipant };
   }
 
-  async placeCharacter({ character, characterIndex }, placement = this.intersectedObject) {
+  async placeCharacter({ character, characterIndex }, placement = this.intersectedObject, enemy) {
     placement.children.forEach(child => child.removeFromParent());
     if (!character) character = characters[characterIndex];
     character.avatar.childOf = placement;
@@ -346,7 +384,7 @@ class GameMap {
       character.avatar.geometry.parameters.height * 0.5 +
       placement.geometry.parameters.height * 0.5;
     placement.add(character.avatar);
-    this.placedCharacters.push(character);
+    if (!enemy) this.placedCharacters.add(character);
   }
 
   render() {
