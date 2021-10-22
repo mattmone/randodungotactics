@@ -27,6 +27,7 @@ class GameScreen extends LitElement {
       commenceActive: { type: Boolean, state: true },
       commenced: { type: Boolean, state: true },
       currentParticipant: { type: Object },
+      moved: { type: Boolean },
     };
   }
 
@@ -93,7 +94,7 @@ class GameScreen extends LitElement {
       const dx = -(this.rotation.start.x - x);
       if (Math.abs(dx) > 10) this._moving = true;
       this.rotation.delta = { dx };
-      if (new Date() - this._pointerDown > 100) this.gameMap.setRotation(this.rotation.delta);
+      this.gameMap.setRotation(this.rotation.delta);
     }
   }
 
@@ -120,14 +121,16 @@ class GameScreen extends LitElement {
     });
   }
 
-  async canvasClick() {
+  async canvasClick({ x, y }) {
     if (this.nonClick) return (this.nonClick = false);
-    const { clickPosition, selectedParticipant } = await this.gameMap.mapClick();
+    const { clickPosition, selectedParticipant, endPhase } = await this.gameMap.mapClick({ x, y });
     if (!this.commenced) {
       const characterIndex = await this.chooseCharacter().catch(() => null);
       if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex });
       return;
     }
+    console.log(endPhase);
+    if (endPhase === 'move') this.moved = true;
   }
 
   async commence() {
@@ -145,9 +148,8 @@ class GameScreen extends LitElement {
     this.gameMap?.initiateMove();
   }
   async waitTurn() {
-    console.log('wait turn');
     this.currentParticipant = await this.gameMap.endTurn();
-    console.log(this.currentParticipant);
+    this.moved = false;
   }
 
   render() {
@@ -164,6 +166,7 @@ class GameScreen extends LitElement {
       <current-turn
         hidden
         .currentParticipant=${this.currentParticipant}
+        .moved=${this.moved}
         @start-move=${this.startMove}
         @wait-turn=${this.waitTurn}
       ></current-turn>

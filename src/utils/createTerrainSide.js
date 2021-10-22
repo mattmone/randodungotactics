@@ -46,6 +46,7 @@ const terrain = {
   water: new TerrainColor([60, 60, 120]),
   entry: { baseColor: 'rgb(100,100,100)', borderColor: ['rgb(20,20,20)'] },
   highlight: { baseColor: 'rgb(200,200,100)', borderColor: ['rgb(20,20,20)'] },
+  move: { baseColor: 'rgb(255,255,255)', borderColor: ['rgb(20,20,20)'] },
 };
 
 const createdCanvii = {};

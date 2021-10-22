@@ -21,6 +21,11 @@ class CurrentTurn extends LitElement {
           background-color: rgba(0, 0, 0, 0.7);
           backdrop-filter: blur(5px);
         }
+        @media (orientation: portrait) {
+          :host {
+            width: 100vw;
+          }
+        }
         #current-turn {
           display: flex;
           flex-direction: column;
@@ -66,7 +71,7 @@ class CurrentTurn extends LitElement {
   }
 
   static get properties() {
-    return { currentParticipant: Object };
+    return { currentParticipant: Object, moved: Boolean };
   }
 
   move() {
@@ -100,7 +105,7 @@ class CurrentTurn extends LitElement {
           <span>mana</span>
         </div>
         <div id="actions">
-          <button @click=${this.move}>Move</button>
+          <button @click=${this.move} ?disabled=${this.moved}>Move</button>
           <button @click=${this.skills}>Skills</button>
           <button @click=${this.spells}>Spells</button>
           <button @click=${this.wait}>Wait</button>

@@ -18,6 +18,7 @@ class CharacterSelection extends LitElement {
           backdrop-filter: blur(3px);
           display: grid;
           place-items: center;
+          z-index: 10;
         }
         section {
           display: flex;
@@ -29,6 +30,11 @@ class CharacterSelection extends LitElement {
           padding: 8px;
           gap: 8px;
         }
+        @media (orientation: portrait) {
+          section {
+            width: 100vw;
+          }
+        }
         header {
           color: white;
           font-size: 24px;
@@ -36,7 +42,7 @@ class CharacterSelection extends LitElement {
         }
         #selection {
           display: grid;
-          grid-template-columns: repeat(auto-fit, 10vw);
+          grid-template-columns: repeat(auto-fit, 100px);
           gap: 8px;
         }
         button {
