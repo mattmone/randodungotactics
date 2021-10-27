@@ -18,8 +18,6 @@ import {
   VectorKeyframeTrack,
   AnimationClip,
   Clock,
-  LoopOnce,
-  Quaternion,
   Object3D,
 } from '../../node_modules/three/build/three.module.js';
 
@@ -33,17 +31,28 @@ import { randomCharacter } from '../utils/randomCharacter.js';
 const characters = new Array(7)
   .fill(0)
   .map(() =>
-    randomCharacter(new Character('', new Mesh(new BoxGeometry(), new MeshStandardMaterial()))),
+    randomCharacter(
+      new Character('', new Mesh(new BoxGeometry(0.5, 1, 0.5), new MeshStandardMaterial())),
+    ),
   );
 
 const enemies = new Array(5)
   .fill(0)
   .map(() =>
-    randomCharacter(new Character('', new Mesh(new BoxGeometry(), new MeshStandardMaterial()))),
+    randomCharacter(
+      new Character('', new Mesh(new BoxGeometry(0.5, 1, 0.5), new MeshStandardMaterial())),
+    ),
   );
 
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
+};
+
+const sameTeam = (char1, char2) => {
+  return (
+    (characters.includes(char1) && characters.includes(char2)) ||
+    (enemies.includes(char1) && enemies.includes(char2))
+  );
 };
 
 function turnSort(participant1, participant2) {
@@ -78,6 +87,8 @@ class GameMap {
    * @type {Mesh[]}
    */
   animationsObjects = [];
+
+  interactible = [];
 
   /**
    * instantiate the GameMap
@@ -265,10 +276,13 @@ class GameMap {
     )?.passable;
     // if (selectedParticipant || this.currentParticipant)
     //   this.focus((selectedParticipant || this.currentParticipant).position);
-    let endPhase = false;
+    let endPhase = false,
+      damage,
+      position;
     if (this.phase === 'move') endPhase = await this.move(clickPosition);
-    console.log(endPhase);
-    return { clickPosition, selectedParticipant, endPhase };
+    if (this.phase === 'action' && this.action === 'attack')
+      [endPhase, damage, position] = await this.attack(clickPosition);
+    return { clickPosition, selectedParticipant, endPhase, damage, position };
   }
 
   async mapAvailable(index, entry) {
@@ -371,41 +385,54 @@ class GameMap {
     return this.currentParticipant.passable;
   }
 
-  focus(position = this.currentParticipant.position) {
+  focus(position = this.currentParticipant.tile.position) {
     return this.createMoveAnimation({ endPosition: position });
   }
 
   initiateMove() {
     this.phase = 'move';
-    const { tile: participantTile, move } = this.currentParticipant;
-    this.moveable = this.map.children.filter(
+    this.markInteractibles(this.currentParticipant.move, this.phase);
+  }
+
+  initiateAttack() {
+    this.phase = 'action';
+    this.action = 'attack';
+    this.markInteractibles(this.currentParticipant.attackRange, this.phase);
+  }
+
+  markInteractibles(range, action) {
+    this.clearInteractible();
+    this.interactible = this.map.children.filter(
       tile =>
-        tile.position.distanceTo(participantTile.position) <= move &&
+        tile.position.distanceTo(this.currentParticipant.tile.position) <= range + 0.2 &&
         !tile.userData.tree &&
-        tile.userData.texture !== 'water',
+        tile.userData.texture !== 'water' &&
+        !positionEquals(tile.position, this.currentParticipant.tile.position),
     );
-    this.moveable.forEach(tile => {
-      const moveMaterial = new MeshBasicMaterial({
-        map: new CanvasTexture(createTerrainSide('move')),
+    this.interactible.forEach(tile => {
+      const material = new MeshBasicMaterial({
+        map: new CanvasTexture(createTerrainSide('interactable')),
       });
-      moveMaterial.opacity = 0.6;
-      moveMaterial.transparent = true;
-      const moveTile = new Mesh(new BoxGeometry(1, 0.1, 1), moveMaterial);
-      moveTile.position.y = tile.position.y + 0.25;
-      moveTile.userData.type = 'move';
-      tile.add(moveTile);
+      material.opacity = 0.6;
+      material.transparent = true;
+      const interactTile = new Mesh(new BoxGeometry(1, 0.1, 1), material);
+      interactTile.position.y = tile.position.y + 0.25 + (tile.userData.rock ? 1 : 0);
+      interactTile.userData.type = action;
+      tile.add(interactTile);
     });
   }
 
   async move(position) {
-    const startBlock = this.currentParticipant.avatar.userData.childOf;
+    const startBlock = this.currentParticipant.tile;
     const endBlock = this.intersectedObject.parent;
     const startPosition = startBlock.position;
     const endPosition = endBlock.position;
     const endPointVector = new Vector3(
       this.currentParticipant.avatar.position.x + (endPosition.x - startPosition.x),
       this.currentParticipant.avatar.position.y +
-        (endBlock.userData.elevation - startBlock.userData.elevation),
+        (endBlock.userData.elevation - startBlock.userData.elevation) +
+        (endBlock.userData?.rock ? 1 : 0) -
+        (startBlock.userData?.rock ? 1 : 0),
       this.currentParticipant.avatar.position.z + (endPosition.z - startPosition.z),
     );
     await this.createMoveAnimation({
@@ -413,21 +440,54 @@ class GameMap {
       startPosition: this.currentParticipant.avatar.position,
       endPointVector,
     });
-    this.currentParticipant.avatar.userData.childOf = endBlock;
+    this.currentParticipant.tile = endBlock;
     this.focus();
-    this.moveable.forEach(tile =>
-      tile.children.find(moveTile => moveTile.userData.type === 'move').removeFromParent(),
-    );
+    this.clearInteractible();
     this.phase = '';
     return 'move';
   }
 
+  async attack(position) {
+    const victim = this.participants.find(({ avatar }) =>
+      positionEquals(avatar.userData.childOf.position, this.intersectedObject.parent.position),
+    );
+    if (sameTeam(victim, this.currentParticipant)) console.log('same team');
+    const damage = rollDice(...this.currentParticipant.damage);
+    victim.hp -= damage;
+    if (victim.hp <= 0) victim.die();
+    const vector = new Vector3().subVectors(
+      victim.avatar.userData.childOf.position,
+      this.currentParticipant.avatar.userData.childOf.position,
+    );
+    vector.x += 0.5;
+    vector.y += 2;
+    vector.project(this.camera);
+    vector.x = ((vector.x + 1) * this.canvas.width) / 2;
+    vector.y = (-(vector.y - 1) * this.canvas.height) / 2;
+
+    this.clearInteractible();
+    this.phase = '';
+    return ['action', damage, { x: vector.x, y: vector.y }];
+  }
+
+  clearInteractible() {
+    if (!this.interactible) this.interactible = [];
+    this.interactible.forEach(tile =>
+      tile.children
+        .find(actionTile => /action|move/.test(actionTile.userData.type))
+        ?.removeFromParent(),
+    );
+    this.interactible = [];
+  }
+
   endTurn() {
+    this.clearInteractible();
     this.currentParticipant.nextMove =
       this.currentTime + 1 / (0.25 * this.currentParticipant.stats.speed);
     this.participants.sort(turnSort);
     this.currentParticipant = this.participants[0];
     this.currentTime = this.currentParticipant.nextMove;
+    if (this.currentParticipant.dead) return this.endTurn();
     this.focus();
     return this.currentParticipant.passable;
   }
@@ -468,7 +528,7 @@ class GameMap {
   async placeCharacter({ character, characterIndex }, placement = this.intersectedObject, enemy) {
     placement.children.forEach(child => child.removeFromParent());
     if (!character) character = characters[characterIndex];
-    character.avatar.userData.childOf = placement;
+    character.tile = placement;
     character.position = { ...placement.position };
     const characterAtPosition = characters.find(
       char => char !== character && positionEquals(char.position, character.position),
@@ -483,7 +543,8 @@ class GameMap {
 
   determineIntersectionObject() {
     this.raycaster.setFromCamera(this.mousePosition, this.camera);
-    const [intersect] = this.raycaster.intersectObjects(this.map?.children || [], true);
+    const intersects = this.raycaster.intersectObjects(this.map?.children || [], true);
+    const intersect = intersects.find(({ object }) => object?.userData?.type === this.phase);
     if (intersect && intersect?.object?.userData?.type === this.phase) {
       if (this.intersectedObject && this.intersectedObject !== intersect.object) {
         this.intersectedObject.material.map = this.intersectedObject.userData.materialMap;

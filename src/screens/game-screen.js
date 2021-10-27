@@ -16,6 +16,18 @@ class GameScreen extends LitElement {
           transform: translateX(-50%);
           padding: 8px 16px;
         }
+        #notifier {
+          opacity: 0;
+          position: fixed;
+          top: 0;
+          left: 0;
+          color: white;
+          font-family: VT323;
+          pointer-events: none;
+        }
+        #notifier[open] {
+          opacity: 1;
+        }
       `,
     ];
   }
@@ -28,6 +40,11 @@ class GameScreen extends LitElement {
       commenced: { type: Boolean, state: true },
       currentParticipant: { type: Object },
       moved: { type: Boolean },
+      acted: { type: Boolean },
+      notificationX: { type: Number },
+      notificationY: { type: Number },
+      message: { type: String },
+      notificationOpen: { type: Boolean },
     };
   }
 
@@ -47,6 +64,8 @@ class GameScreen extends LitElement {
     this.screenWidth = window.innerWidth;
     this.screenHeight = window.innerHeight;
     this.rotation = {};
+    this.notificationX = 0;
+    this.notificationY = 0;
   }
 
   async firstUpdated() {
@@ -123,14 +142,24 @@ class GameScreen extends LitElement {
 
   async canvasClick({ x, y }) {
     if (this.nonClick) return (this.nonClick = false);
-    const { clickPosition, selectedParticipant, endPhase } = await this.gameMap.mapClick({ x, y });
+    const { clickPosition, selectedParticipant, endPhase, damage, position } =
+      await this.gameMap.mapClick({ x, y });
     if (!this.commenced) {
       const characterIndex = await this.chooseCharacter().catch(() => null);
       if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex });
       return;
     }
-    console.log(endPhase);
     if (endPhase === 'move') this.moved = true;
+    if (endPhase === 'action') {
+      this.acted = true;
+      this.message = damage;
+      this.notificationX = position.x;
+      this.notificationY = position.y;
+      this.notificationOpen = true;
+      setTimeout(() => {
+        this.notificationOpen = false;
+      }, 1500);
+    }
   }
 
   async commence() {
@@ -147,9 +176,15 @@ class GameScreen extends LitElement {
   async startMove() {
     this.gameMap?.initiateMove();
   }
+
   async waitTurn() {
     this.currentParticipant = await this.gameMap.endTurn();
     this.moved = false;
+    this.acted = false;
+  }
+
+  async playerAttack() {
+    this.gameMap?.initiateAttack();
   }
 
   render() {
@@ -167,8 +202,10 @@ class GameScreen extends LitElement {
         hidden
         .currentParticipant=${this.currentParticipant}
         .moved=${this.moved}
+        .acted=${this.acted}
         @start-move=${this.startMove}
         @wait-turn=${this.waitTurn}
+        @player-attack=${this.playerAttack}
       ></current-turn>
       <button
         id="commence"
@@ -177,7 +214,14 @@ class GameScreen extends LitElement {
         @click=${this.commence}
       >
         Commence
-      </button>`;
+      </button>
+      <div
+        id="notifier"
+        ?open=${this.notificationOpen}
+        style="transform:translate(${this.notificationX}px, ${this.notificationY}px);"
+      >
+        ${this.message}
+      </div>`;
   }
 }
 customElements.define('game-screen', GameScreen);

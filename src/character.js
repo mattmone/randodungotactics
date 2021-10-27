@@ -18,12 +18,20 @@ export class Character {
   constructor(name, avatar) {
     this.name = name;
     this.avatar = avatar;
+    this.avatar.userData.type = 'avatar';
     /** @type {Stats} */
     this.stats = {};
     this.skills = {};
     this.position = false;
     this.effects = {};
     this.modifiers = {};
+    this.equipment = {
+      weapon: {
+        range: 5,
+        strength: 2,
+        power: 2,
+      },
+    };
     // this.direction = DIRECTION.NORTH;
   }
 
@@ -38,8 +46,23 @@ export class Character {
     return this._nextMove || 0;
   }
 
+  get attackRange() {
+    return this.equipment?.weapon?.range || 1;
+  }
+
+  get damage() {
+    return [
+      (this.equipment?.weapon?.strength || 0) + this.stats.strength,
+      (this.equipment?.weapon?.power || 0) + this.stats.dexterity,
+    ];
+  }
+
   get tile() {
     return this.avatar.userData.childOf;
+  }
+
+  set tile(tile) {
+    this.avatar.userData.childOf = tile;
   }
 
   get move() {
@@ -67,5 +90,10 @@ export class Character {
     this.hp = this.maxhp;
     /** @type {Number} */
     this.mana = this.maxmana;
+  }
+
+  async die() {
+    const { deathAnimation } = await import('./animations/character-death.js');
+    deathAnimation.call(this);
   }
 }

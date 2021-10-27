@@ -63,15 +63,16 @@ class CurrentTurn extends LitElement {
           padding: 0 8px;
         }
         button {
-          aspect-ratio: 2 / 1;
+          aspect-ratio: 3 / 1;
           justify-content: center;
+          min-height: 44px;
         }
       `,
     ];
   }
 
   static get properties() {
-    return { currentParticipant: Object, moved: Boolean };
+    return { currentParticipant: Object, moved: Boolean, acted: Boolean };
   }
 
   move() {
@@ -81,6 +82,11 @@ class CurrentTurn extends LitElement {
   skills() {}
 
   spells() {}
+
+  attack() {
+    this.dispatchEvent(new CustomEvent('player-attack'));
+  }
+  defend() {}
 
   wait() {
     this.dispatchEvent(new CustomEvent('wait-turn'));
@@ -106,8 +112,10 @@ class CurrentTurn extends LitElement {
         </div>
         <div id="actions">
           <button @click=${this.move} ?disabled=${this.moved}>Move</button>
-          <button @click=${this.skills}>Skills</button>
-          <button @click=${this.spells}>Spells</button>
+          <button @click=${this.attack} ?disabled=${this.acted}>Attack</button>
+          <button @click=${this.defend} ?disabled=${this.acted}>Defend</button>
+          <button @click=${this.skills} ?disabled=${this.acted}>Skills</button>
+          <button @click=${this.spells} ?disabled=${this.acted}>Spells</button>
           <button @click=${this.wait}>Wait</button>
         </div>
       </section>
