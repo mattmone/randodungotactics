@@ -175,8 +175,14 @@ const finishMap = {
     ),
 };
 
+/**
+ * Generates map raw data using simplex noise
+ * @param {MapOptions} options the options for the map
+ * @returns {MapTile[]}
+ */
 export function makeMap(options = {}) {
   const { width = 24, height = 12, min = 0, max = 10, type = 'largeRoad' } = options;
+  /** @type {Number[]} */
   const pixels = new Array(width).fill(new Array(height).fill(0));
 
   const { octaves, gain, lacunarity, startingAmplitude } = mapOptions[type];
@@ -195,6 +201,7 @@ export function makeMap(options = {}) {
   //set up the random numbers table
   const permutations = new Array(24).fill(0);
 
+  /** @type {Number[]} */
   const map = pixels.map((stripe, stripeIndex) =>
     stripe.map((pixel, pixelIndex) => {
       let amplitude = startingAmplitude;
@@ -271,6 +278,11 @@ export function makeMap(options = {}) {
   return finishMap[type](map);
 }
 
+/**
+ * Run the map raw data through Erosion
+ * @param {Numner[]} map the map raw data
+ * @param {Number} iterations iterations through the map
+ */
 function improvedErosion(map, iterations) {
   const talus = 12.0 / map.length;
 
@@ -308,6 +320,21 @@ function improvedErosion(map, iterations) {
   }
 }
 
+/**
+ * Build the map tiles
+ * @param {Number[]} map the map data
+ * @param {Boolean} averagedPath if the map has a path
+ * @param {Number} amplitude the amplitude of generation
+ * @param {Number} pathWidth the width of the path
+ * @param {Number} frequency the frequency of generation
+ * @param {Number} starting the starting location
+ * @param {Number} slantAngle the angle of the elevation slant
+ * @param {Number} rockChance the percentage chance of a tile containing a rock
+ * @param {Number} treeChance the percentage chance of a tile containing a tree
+ * @param {String} pathTexture the texture key of the path
+ * @param {String} baseTexture the texture key of the base map
+ * @returns {MapTile[]}
+ */
 function buildMap(
   map,
   averagedPath,
@@ -382,3 +409,20 @@ function buildMap(
     });
   });
 }
+
+/**
+ * @typedef {Object} MapOptions
+ * @property {Number} [width = 24]
+ * @property {Number} [height = 12]
+ * @property {Number} [min = 0]
+ * @property {Number} [max = 10]
+ * @property {String} [type = 'largeRoad']
+ *
+ * @typedef {Object} MapTile
+ * @property {Number } elevation
+ * @property {String|Function} texture
+ * @property {Boolean} rock
+ * @property {Boolean} tree
+ * @property {Boolean} entry
+ * @property {Boolean} enemy
+ */

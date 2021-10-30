@@ -47,13 +47,13 @@ export class Character {
   }
 
   get attackRange() {
-    return this.equipment?.weapon?.range || 1;
+    return this.equipment?.primary?.range || 1;
   }
 
   get damage() {
     return [
-      (this.equipment?.weapon?.strength || 0) + this.stats.strength,
-      (this.equipment?.weapon?.power || 0) + this.stats.dexterity,
+      (this.equipment?.primary?.strength || 0) + this.stats.strength,
+      (this.equipment?.primary?.power || 0) + this.stats.dexterity,
     ];
   }
 
@@ -95,5 +95,18 @@ export class Character {
   async die() {
     const { deathAnimation } = await import('./animations/character-death.js');
     deathAnimation.call(this);
+  }
+
+  degradeWeapon(damage, secondary) {
+    if (secondary) return this.equipment?.secondary?.degrade(damage / 10);
+    return this.equipment?.primary?.degrade(damage / 10);
+  }
+
+  distributeDamage(damage) {
+    damage -= this.equipment?.body?.degrade(damage) || 0;
+    damage -= this.equipment?.helm?.degrade(damage) || 0;
+    damage -= this.equipment?.gloves?.degrade(damage) || 0;
+    damage -= this.equipment?.boots?.degrade(damage) || 0;
+    this.hp -= damage;
   }
 }

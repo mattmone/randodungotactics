@@ -1,3 +1,4 @@
+import { Character } from '../character.js';
 import { oneOf } from './oneOf.js';
 
 const names = [
@@ -242,6 +243,11 @@ const colors = [
   { name: 'Yellow Green', hex: 0x9acd32 },
 ];
 
+/**
+ * Randomizes the character
+ * @param {Character} character
+ * @returns {Character}
+ */
 export function randomCharacter(character) {
   character.name = oneOf(names);
   const color = oneOf(colors);

@@ -453,7 +453,8 @@ class GameMap {
     );
     if (sameTeam(victim, this.currentParticipant)) console.log('same team');
     const damage = rollDice(...this.currentParticipant.damage);
-    victim.hp -= damage;
+    this.currentParticipant.degradeWeapon(damage);
+    victim.distributeDamage(damage);
     if (victim.hp <= 0) victim.die();
     const vector = new Vector3().subVectors(
       victim.avatar.userData.childOf.position,

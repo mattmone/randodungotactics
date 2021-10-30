@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "classic"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
