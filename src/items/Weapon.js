@@ -8,9 +8,12 @@ export class Weapon extends Item {
   constructor(weaponParams) {
     super(weaponParams);
     /** @type {Number} */
-    this.type = 'weapon';
     this.range = weaponParams.range || 1;
     this.hands = weaponParams.hands || 1;
+  }
+
+  get type() {
+    return 'weapon';
   }
 }
 
