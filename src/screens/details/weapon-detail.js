@@ -3,11 +3,16 @@ import { dieDisplay } from 'utils/dieDisplay.js';
 import { detailStyles } from 'styles/detail.styles.js';
 import { commonStyles } from 'styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
-import { durabilityTemplate, gemsTemplate, statTemplate, effectsTemplate } from './common-detail.js';
+import {
+  durabilityTemplate,
+  gemsTemplate,
+  statTemplate,
+  effectsTemplate,
+} from './common-detail.js';
 
 class WeaponDetail extends LitElement {
   static get styles() {
-    return [progressStyles, commonStyles, detailStyles]
+    return [progressStyles, commonStyles, detailStyles];
   }
 
   static get properties() {
@@ -16,13 +21,12 @@ class WeaponDetail extends LitElement {
 
   render() {
     return html`
-    <header>${this.item.name}</header>
-    ${durabilityTemplate(this.item)}
-    ${statTemplate(this.item.type, this.item.damage)}
-    ${statTemplate('Damage', dieDisplay(this.item.strength, this.item.power))}
-    ${gemsTemplate(this.item.gems)}
-    ${effectsTemplate(this.item.effects)}
-    `
+      <header>${this.item.name}</header>
+      ${durabilityTemplate(this.item)} ${statTemplate('Hands', this.item.hands)}
+      ${statTemplate('Range', this.item.range)}
+      ${statTemplate('Damage', dieDisplay(this.item.strength, this.item.power))}
+      ${gemsTemplate(this.item.gems)} ${effectsTemplate(this.item.effects)}
+    `;
   }
 }
 customElements.define('weapon-detail', WeaponDetail);
