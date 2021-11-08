@@ -100,7 +100,7 @@ class CharacterSelection extends LitElement {
               @click=${() =>
                 this.dispatchEvent(new CustomEvent('character-selected', { detail: character }))}
             >
-              <img src=${character.avatar.image} />
+              <img src=${character.avatarImage} />
               <span>${character.name}</span>
               ${character.position && html`<button class="remove">x</button>`}
             </button>`,
