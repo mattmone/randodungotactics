@@ -1,4 +1,4 @@
-import { expose } from '../../node_modules/comlink/dist/esm/comlink.js';
+import { expose } from '../../libs/comlink.min.js';
 import {
   Scene,
   OrthographicCamera,
@@ -19,7 +19,7 @@ import {
   AnimationClip,
   Clock,
   Object3D,
-} from '../../node_modules/three/build/three.module.js';
+} from '../../libs/three.module.js';
 
 import { makeMap } from '../utils/makeMap.js';
 import { createTerrainSide } from '../utils/createTerrainSide.js';
@@ -30,19 +30,11 @@ import { randomCharacter } from '../utils/randomCharacter.js';
 
 const characters = new Array(7)
   .fill(0)
-  .map(() =>
-    randomCharacter(
-      new Character('', new Mesh(new BoxGeometry(0.5, 1, 0.5), new MeshStandardMaterial())),
-    ),
-  );
+  .map(() => randomCharacter(new Character({ avatarColor: 'red' })));
 
 const enemies = new Array(5)
   .fill(0)
-  .map(() =>
-    randomCharacter(
-      new Character('', new Mesh(new BoxGeometry(0.5, 1, 0.5), new MeshStandardMaterial())),
-    ),
-  );
+  .map(() => randomCharacter(new Character({ avatarColor: 'red' })));
 
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
@@ -57,10 +49,10 @@ const sameTeam = (char1, char2) => {
 
 function turnSort(participant1, participant2) {
   let sort = 0;
-  if (participant1.stats.dexterity < participant2.stats.dexterity) sort = 1;
-  if (participant1.stats.dexterity > participant2.stats.dexterity) sort = -1;
-  if (participant1.stats.speed < participant2.stats.speed) sort = 1;
-  if (participant1.stats.speed > participant2.stats.speed) sort = -1;
+  if (participant1.stats.dexterity.value < participant2.stats.dexterity.value) sort = 1;
+  if (participant1.stats.dexterity.value > participant2.stats.dexterity.value) sort = -1;
+  if (participant1.stats.speed.value < participant2.stats.speed.value) sort = 1;
+  if (participant1.stats.speed.value > participant2.stats.speed.value) sort = -1;
   if (participant1.nextMove > participant2.nextMove) sort = 1;
   if (participant1.nextMove < participant2.nextMove) sort = -1;
   return sort;
@@ -148,7 +140,11 @@ class GameMap {
   }
 
   selectableCharacters() {
-    return characters.map(({ name, position, avatarImage }) => ({ name, position, avatarImage }));
+    return characters.map(({ name, position, avatar: { image } }) => ({
+      name,
+      position,
+      avatarImage: image,
+    }));
   }
 
   generateMap({ type = 'largeRoad', width = 24, height = 12 }) {
@@ -428,16 +424,16 @@ class GameMap {
     const startPosition = startBlock.position;
     const endPosition = endBlock.position;
     const endPointVector = new Vector3(
-      this.currentParticipant.avatar.position.x + (endPosition.x - startPosition.x),
-      this.currentParticipant.avatar.position.y +
+      this.currentParticipant.avatar.mesh.position.x + (endPosition.x - startPosition.x),
+      this.currentParticipant.avatar.mesh.position.y +
         (endBlock.userData.elevation - startBlock.userData.elevation) +
         (endBlock.userData?.rock ? 1 : 0) -
         (startBlock.userData?.rock ? 1 : 0),
-      this.currentParticipant.avatar.position.z + (endPosition.z - startPosition.z),
+      this.currentParticipant.avatar.mesh.position.z + (endPosition.z - startPosition.z),
     );
     await this.createMoveAnimation({
-      mesh: this.currentParticipant.avatar,
-      startPosition: this.currentParticipant.avatar.position,
+      mesh: this.currentParticipant.avatar.mesh,
+      startPosition: this.currentParticipant.avatar.mesh.position,
       endPointVector,
     });
     this.currentParticipant.tile = endBlock;
@@ -449,7 +445,7 @@ class GameMap {
 
   async attack(position) {
     const victim = this.participants.find(({ avatar }) =>
-      positionEquals(avatar.userData.childOf.position, this.intersectedObject.parent.position),
+      positionEquals(avatar.mesh.userData.childOf.position, this.intersectedObject.parent.position),
     );
     if (sameTeam(victim, this.currentParticipant)) console.log('same team');
     const damage = rollDice(...this.currentParticipant.damage);
@@ -457,8 +453,8 @@ class GameMap {
     victim.distributeDamage(damage);
     if (victim.hp <= 0) victim.die();
     const vector = new Vector3().subVectors(
-      victim.avatar.userData.childOf.position,
-      this.currentParticipant.avatar.userData.childOf.position,
+      victim.avatar.mesh.userData.childOf.position,
+      this.currentParticipant.avatar.mesh.userData.childOf.position,
     );
     vector.x += 0.5;
     vector.y += 2;
@@ -484,7 +480,7 @@ class GameMap {
   endTurn() {
     this.clearInteractible();
     this.currentParticipant.nextMove =
-      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.speed);
+      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.speed.value);
     this.participants.sort(turnSort);
     this.currentParticipant = this.participants[0];
     this.currentTime = this.currentParticipant.nextMove;
@@ -535,10 +531,10 @@ class GameMap {
       char => char !== character && positionEquals(char.position, character.position),
     );
     if (characterAtPosition) characterAtPosition.position = null;
-    character.avatar.position.y =
-      character.avatar.geometry.parameters.height * 0.5 +
+    character.avatar.mesh.position.y =
+      character.avatar.mesh.geometry.parameters.height * 0.5 +
       placement.geometry.parameters.height * 0.5;
-    placement.add(character.avatar);
+    placement.add(character.avatar.mesh);
     if (!enemy) this.placedCharacters.add(character);
   }
 

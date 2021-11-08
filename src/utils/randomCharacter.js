@@ -250,19 +250,30 @@ const colors = [
  */
 export function randomCharacter(character) {
   character.name = oneOf(names);
-  const color = oneOf(colors);
-  character.avatar.material.color.setHex(color.hex);
-  character.avatarImage = `data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:${color.name.replaceAll(
-    ' ',
-    '',
-  )}"/></svg>`;
+  character.avatar.ready.then(() => {
+    const color = oneOf(colors);
+    character.avatar.mesh.material.color.setHex(color.hex);
+    character.avatar.image = `data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:${color.name.replaceAll(
+      ' ',
+      '',
+    )}"/></svg>`;
+  });
   character.stats = {
-    strength: Math.ceil(Math.random() * 10),
-    constitution: Math.ceil(Math.random() * 10),
-    dexterity: Math.ceil(Math.random() * 10),
-    speed: Math.ceil(Math.random() * 10),
-    intellect: Math.ceil(Math.random() * 10),
-    magic: Math.ceil(Math.random() * 10),
+    strength: { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
+    constitution: {
+      value: Math.ceil(Math.random() * 10),
+      progression: Math.ceil(Math.random() * 100),
+    },
+    dexterity: {
+      value: Math.ceil(Math.random() * 10),
+      progression: Math.ceil(Math.random() * 100),
+    },
+    speed: { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
+    intellect: {
+      value: Math.ceil(Math.random() * 10),
+      progression: Math.ceil(Math.random() * 100),
+    },
+    magic: { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
   };
   character.setup();
   return character;

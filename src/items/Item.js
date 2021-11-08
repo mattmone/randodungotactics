@@ -1,4 +1,4 @@
-import { rollDice } from '../utils/rollDice';
+import { rollDice } from '../utils/rollDice.js';
 
 export class Item {
   /**
@@ -16,6 +16,10 @@ export class Item {
     this.durability = this.maxdurability;
     /** @type {Map<String,Effect>} */
     this.effects = effects;
+  }
+
+  get serialized() {
+    return { ...this };
   }
 
   get maxdurability() {

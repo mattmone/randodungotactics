@@ -7,7 +7,9 @@
  * @property {Number} intellect
  * @property {Number} magic
  */
-// import { DIRECTION } from '../constants/directions.js';
+import { DIRECTION } from './constants/directions.js';
+
+import { Avatar } from './Avatar.js';
 
 export class Character {
   /**
@@ -15,24 +17,36 @@ export class Character {
    * @param {String} name the name of the character
    * @param {Mesh} avatar the character's visual representation in the game
    */
-  constructor(name, avatar) {
+  constructor({
+    id = crypto.randomUUID(),
+    name = '',
+    avatarColor,
+    stats = {
+      strength: { value: 1, max: 1 },
+      dexterity: { value: 1, max: 1 },
+      constitution: { value: 1, max: 1 },
+      speed: { value: 1, max: 1 },
+      intellect: { value: 1, max: 1 },
+      magic: { value: 1, max: 1 },
+    },
+    skills = {},
+    position = false,
+    effects = {},
+    modifiers = {},
+    equipment = {},
+    direction = DIRECTION.NORTH,
+  }) {
+    this.id = id;
     this.name = name;
-    this.avatar = avatar;
-    this.avatar.userData.type = 'avatar';
+    this.avatar = new Avatar(avatarColor);
     /** @type {Stats} */
-    this.stats = {};
-    this.skills = {};
-    this.position = false;
-    this.effects = {};
-    this.modifiers = {};
-    this.equipment = {
-      weapon: {
-        range: 5,
-        strength: 2,
-        power: 2,
-      },
-    };
-    // this.direction = DIRECTION.NORTH;
+    this.stats = stats;
+    this.skills = skills;
+    this.position = position;
+    this.effects = effects;
+    this.modifiers = modifiers;
+    this.equipment = equipment;
+    this.direction = direction;
   }
 
   /**
@@ -52,31 +66,35 @@ export class Character {
 
   get damage() {
     return [
-      (this.equipment?.primary?.strength || 0) + this.stats.strength,
-      (this.equipment?.primary?.power || 0) + this.stats.dexterity,
+      (this.equipment?.primary?.strength || 0) + this.stats.strength.value,
+      (this.equipment?.primary?.power || 0) + this.stats.dexterity.value,
     ];
   }
 
   get tile() {
-    return this.avatar.userData.childOf;
+    return this.avatar.mesh.userData.childOf;
   }
 
   set tile(tile) {
-    this.avatar.userData.childOf = tile;
+    this.avatar.mesh.userData.childOf = tile;
   }
 
   get move() {
-    return 2 + 0.1 * this.stats.dexterity + (this.modifiers.move ?? 0);
+    return 2 + 0.1 * this.stats.dexterity.value + (this.modifiers.move ?? 0);
   }
 
   /** @type {Number} */
   get maxhp() {
-    return this.stats.constitution * 10 + this.stats.strength * 5 + (this.modifiers.hp ?? 0);
+    return (
+      this.stats.constitution.value * 10 + this.stats.strength.value * 5 + (this.modifiers.hp ?? 0)
+    );
   }
 
   /** @type {Number} */
   get maxmana() {
-    return this.stats.intellect * 10 + this.stats.magic * 5 + (this.modifiers.mana ?? 0);
+    return (
+      this.stats.intellect.value * 10 + this.stats.magic.value * 5 + (this.modifiers.mana ?? 0)
+    );
   }
 
   get passable() {

@@ -118,12 +118,6 @@
       }
     }
 
-    #avatar-location {
-      grid-row: 2 / 4;
-      display: grid;
-      place-items: center;
-    }
-
     #heading {
       margin: 0;
       padding: 0;
@@ -140,20 +134,13 @@
       padding: var(--button-padding);
       cursor: pointer;
       text-transform: uppercase;
+      aspect-ratio: 2 / 1;
     }
-
-    #nameButton {
-      text-transform: initial;
-    }
-
-    #crewButton {
-      padding: 32px 16px;
-    }
-
-    #avatarButton {
+    
+    #crewButton, #shopButton {
       aspect-ratio: 1 / 1;
-      width: 100%;
-      padding: 0;
+      display: grid;
+      place-items: center;
     }
     [hidden] {
       display:none !important;
@@ -179,12 +166,14 @@
 <body>
   <div id='opening_screen'>
     <h1 id='heading'>Rando<span class='accent-text'>Dungo</span><span id='tactics'>Tactics</span></h1>
-    <div id="avatar-location"><button id='avatarButton'><img id='avatar' src=''></button></div>
-    <button id='nameButton'>name</button>
     <button id='crewButton'>crew</button>
+    <button id='shopButton'>shop</button>
     <button id='jobButton'>take a job</button>
-    <side-screen id='character-screen'>
-      <character-content></character-content>
+    <side-screen id='crew-screen'>
+      <crew-content></crew-content>
+    </side-screen>
+    <side-screen id='shop-screen'>
+      <shop-content></shop-content>
     </side-screen>
     <side-screen id='jobs-screen'>
       <jobs-content></jobs-content>
