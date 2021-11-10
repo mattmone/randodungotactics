@@ -71,10 +71,13 @@ class SideScreen extends LitElement {
           { once: true },
         );
       } else {
+        this.dispatchEvent(new CustomEvent('before-close'));
+
         screen.addEventListener(
           'transitionend',
           () => {
             this._triggeredBy?.focus();
+            this.dispatchEvent(new CustomEvent('close'));
           },
           { once: true },
         );

@@ -26,15 +26,11 @@ import { createTerrainSide } from '../utils/createTerrainSide.js';
 import { rollDice } from '../utils/rollDice.js';
 import { oneOf } from '../utils/oneOf.js';
 import { Character } from '../character.js';
-import { randomCharacter } from '../utils/randomCharacter.js';
+import { Crew } from '../services/crew.js';
 
-const characters = new Array(7)
-  .fill(0)
-  .map(() => randomCharacter(new Character({ avatarColor: 'red' })));
+const characters = new Crew();
 
-const enemies = new Array(5)
-  .fill(0)
-  .map(() => randomCharacter(new Character({ avatarColor: 'red' })));
+const enemies = new Crew('enemy');
 
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
@@ -42,17 +38,19 @@ const positionEquals = (position1, position2) => {
 
 const sameTeam = (char1, char2) => {
   return (
-    (characters.includes(char1) && characters.includes(char2)) ||
-    (enemies.includes(char1) && enemies.includes(char2))
+    (characters.members.includes(char1) && characters.members.includes(char2)) ||
+    (enemies.members.includes(char1) && enemies.members.includes(char2))
   );
 };
 
 function turnSort(participant1, participant2) {
   let sort = 0;
-  if (participant1.stats.dexterity.value < participant2.stats.dexterity.value) sort = 1;
-  if (participant1.stats.dexterity.value > participant2.stats.dexterity.value) sort = -1;
-  if (participant1.stats.speed.value < participant2.stats.speed.value) sort = 1;
-  if (participant1.stats.speed.value > participant2.stats.speed.value) sort = -1;
+  if (participant1.stats.get('dexterity').value < participant2.stats.get('dexterity').value)
+    sort = 1;
+  if (participant1.stats.get('dexterity').value > participant2.stats.get('dexterity').value)
+    sort = -1;
+  if (participant1.stats.get('speed').value < participant2.stats.get('speed').value) sort = 1;
+  if (participant1.stats.get('speed').value > participant2.stats.get('speed').value) sort = -1;
   if (participant1.nextMove > participant2.nextMove) sort = 1;
   if (participant1.nextMove < participant2.nextMove) sort = -1;
   return sort;
@@ -115,7 +113,6 @@ class GameMap {
 
     this.renderer = new WebGLRenderer({ canvas });
     this.renderer.setSize(canvas.width, canvas.height, false);
-
     this.render();
     return this;
   }
@@ -140,9 +137,9 @@ class GameMap {
   }
 
   selectableCharacters() {
-    return characters.map(({ name, position, avatar: { image } }) => ({
+    return characters.members.map(({ name, placed, avatar: { image } }) => ({
       name,
-      position,
+      placed,
       avatarImage: image,
     }));
   }
@@ -265,20 +262,16 @@ class GameMap {
     this.mousePosition.y = -(y / this.canvas.height) * 2 + 1;
     this.determineIntersectionObject();
     if (!this.intersectedObject) return;
-    const { x: objx, y: objy, z: objz } = this.intersectedObject.position;
-    const clickPosition = { x: objx, y: objy, z: objz };
-    const selectedParticipant = this.participants?.find?.(({ position }) =>
-      positionEquals(position, clickPosition),
-    )?.passable;
-    // if (selectedParticipant || this.currentParticipant)
-    //   this.focus((selectedParticipant || this.currentParticipant).position);
+    const clickPosition = { ...this.intersectedObject.position };
+    const childCount = this.intersectedObject.children.length;
+
     let endPhase = false,
       damage,
       position;
     if (this.phase === 'move') endPhase = await this.move(clickPosition);
     if (this.phase === 'action' && this.action === 'attack')
       [endPhase, damage, position] = await this.attack(clickPosition);
-    return { clickPosition, selectedParticipant, endPhase, damage, position };
+    return { clickPosition, childCount, endPhase, damage, position };
   }
 
   async mapAvailable(index, entry) {
@@ -347,7 +340,7 @@ class GameMap {
     this.map = this.renderedMaps.splice(index, 1)[0];
 
     const enemyTiles = this.map.children.filter(tile => tile.userData.enemy);
-    enemies.forEach(enemy => {
+    enemies.members.forEach(enemy => {
       const placementTile = oneOf(enemyTiles);
       this.placeCharacter({ character: enemy }, placementTile, true);
     });
@@ -374,7 +367,7 @@ class GameMap {
   }
 
   async startBattle() {
-    this.participants = [...this.placedCharacters, ...enemies].sort(turnSort);
+    this.participants = [...this.placedCharacters, ...enemies.members].sort(turnSort);
     this.currentTime = 0;
     this.currentParticipant = this.participants[0];
     this.focus();
@@ -480,7 +473,7 @@ class GameMap {
   endTurn() {
     this.clearInteractible();
     this.currentParticipant.nextMove =
-      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.speed.value);
+      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.get('speed').value);
     this.participants.sort(turnSort);
     this.currentParticipant = this.participants[0];
     this.currentTime = this.currentParticipant.nextMove;
@@ -522,12 +515,21 @@ class GameMap {
     });
   }
 
+  async removeChildren() {
+    this.intersectedObject.children.forEach(child => {
+      const character = characters.members.find(character => character.avatar.mesh === child);
+      character.placed = false;
+      child.removeFromParent();
+    });
+  }
+
   async placeCharacter({ character, characterIndex }, placement = this.intersectedObject, enemy) {
     placement.children.forEach(child => child.removeFromParent());
-    if (!character) character = characters[characterIndex];
+    if (!character) character = characters.members[characterIndex];
     character.tile = placement;
+    character.placed = true;
     character.position = { ...placement.position };
-    const characterAtPosition = characters.find(
+    const characterAtPosition = characters.members.find(
       char => char !== character && positionEquals(char.position, character.position),
     );
     if (characterAtPosition) characterAtPosition.position = null;

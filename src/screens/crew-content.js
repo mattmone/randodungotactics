@@ -2,8 +2,8 @@ import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
-import { randomCharacter } from '../utils/randomCharacter.js';
 import { Character } from '../character.js';
+import { Crew } from '../services/crew.js';
 
 class CrewContent extends LitElement {
   static get styles() {
@@ -21,18 +21,27 @@ class CrewContent extends LitElement {
           display: flex;
           flex-direction: column;
           padding: 8px;
+          justify-content: space-between;
         }
         #crew {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
           padding: 8px;
           gap: 8px;
+          max-height: 100%;
+          overflow: auto;
+        }
+        #recruit {
+          justify-content: center;
         }
         h2 {
           font-size: 1rem;
         }
         .crewMember {
           flex-direction: column;
+        }
+        .crewMember img {
+          width: 100%;
         }
       `,
     ];
@@ -45,11 +54,11 @@ class CrewContent extends LitElement {
   constructor() {
     super();
     /** @type {Character[]} */
-    this.crew = Array(10)
-      .fill(0)
-      .map(() => randomCharacter(new Character({ avatarColor: 'red' })));
-    Promise.all(this.crew.map(member => member.avatar.ready)).then(() => {
-      this.requestUpdate();
+    this.crew = new Crew();
+    this.crew.ready.then(() => {
+      Promise.all(this.crew.members.map(member => member.avatar.ready)).then(() => {
+        this.requestUpdate();
+      });
     });
   }
 
@@ -61,17 +70,22 @@ class CrewContent extends LitElement {
     };
   }
 
+  characterScreenClosed() {
+    this.requestUpdate();
+  }
+
   render() {
     return html`
       <section id="crew">
-        ${this.crew.map(
+        ${this.crew.members.map(
           member => html`<button class="crewMember" @click=${this.selectCrew(member)}>
             <img src="${member?.avatar.image}" />
             <h2>${member.name}</h2>
           </button>`,
         )}
       </section>
-      <side-screen id="character-screen">
+      <button id="recruit">RECRUIT</button>
+      <side-screen @before-close=${this.characterScreenClosed} id="character-screen">
         <character-content .character=${this.selectedMember}></character-content>
       </side-screen>
     `;

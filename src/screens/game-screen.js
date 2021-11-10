@@ -142,9 +142,12 @@ class GameScreen extends LitElement {
 
   async canvasClick({ x, y }) {
     if (this.nonClick) return (this.nonClick = false);
-    const { clickPosition, selectedParticipant, endPhase, damage, position } =
-      await this.gameMap.mapClick({ x, y });
+    const { clickPosition, childCount, endPhase, damage, position } = await this.gameMap.mapClick({
+      x,
+      y,
+    });
     if (!this.commenced) {
+      if (childCount) return this.gameMap.removeChildren();
       const characterIndex = await this.chooseCharacter().catch(() => null);
       if (characterIndex !== null) this.gameMap.placeCharacter({ characterIndex });
       return;

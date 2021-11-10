@@ -56,8 +56,12 @@ class EquipmentContent extends LitElement {
     this.itemLocation = '';
   }
 
+  get equippedEntries() {
+    return Array.from(this.character.equipment.entries());
+  }
+
   get equippedItems() {
-    return Object.values(this.character.equipment);
+    return Array.from(this.character.equipment.values());
   }
 
   showEquipment(category) {
@@ -75,24 +79,22 @@ class EquipmentContent extends LitElement {
   }
 
   equip({ detail: item }) {
-    this.character.equipment[this.selectedCatgory] = this.items.splice(
-      this.items.indexOf(item),
-      1,
-    )[0];
+    this.character.equip(this.selectedCatgory, this.items.splice(this.items.indexOf(item), 1)[0]);
     this.requestUpdate();
+  }
+
+  #equipmentScreenClosed() {
+    this.dispatchEvent(new CustomEvent('equipment-closed'));
   }
 
   render() {
     return html`<slot></slot>
-      <side-screen id="equipment">
+      <side-screen id="equipment" @close=${this.#equipmentScreenClosed}>
         <div id="equipment-locations">
-          ${this.equippedItems
-            ?.filter(
-              item =>
-                this.itemLocation.includes(item.type) || this.itemLocation.includes(item.slot),
-            )
+          ${this.equippedEntries
+            ?.filter(([location, item]) => location === this.selectedCatgory)
             .map(
-              item =>
+              ([location, item]) =>
                 html` <button equipped @click=${this.showDetail(item)}>${item.name}</button> `,
             )}
           ${this.items

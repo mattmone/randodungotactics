@@ -53,6 +53,11 @@ class CharacterSelection extends LitElement {
           max-width: 100%;
           aspect-ratio: 1 / 1;
         }
+        button[placed] {
+          border-color: var(--accent-color);
+          color: var(--accent-color);
+        }
+
         #cancel {
           align-self: flex-end;
           padding: 8px 16px;
@@ -96,13 +101,12 @@ class CharacterSelection extends LitElement {
         ${this.characters.map(
           character =>
             html`<button
-              ?positioned=${character.position}
+              ?placed=${character.placed}
               @click=${() =>
                 this.dispatchEvent(new CustomEvent('character-selected', { detail: character }))}
             >
               <img src=${character.avatarImage} />
               <span>${character.name}</span>
-              ${character.position && html`<button class="remove">x</button>`}
             </button>`,
         )}
       </div>

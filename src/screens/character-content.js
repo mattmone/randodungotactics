@@ -137,6 +137,10 @@ class CharacterContent extends LitElement {
     };
   }
 
+  updateName({ target: { value } }) {
+    this.character.name = value;
+  }
+
   showEquipment(category) {
     return async () => {
       if (!this.items) {
@@ -153,7 +157,7 @@ class CharacterContent extends LitElement {
 
   render() {
     return html`
-      <input type="text" value=${this.character.name || 'name'} />
+      <input type="text" value=${this.character.name || 'name'} @input=${this.updateName} />
       <div id="image-section">
         <img id="avatar" src=${this.character.avatar.image} />
       </div>
@@ -172,12 +176,12 @@ class CharacterContent extends LitElement {
         </button>
       </div>
       <stats-content ?hidden=${this.category !== 'stats'}>
-        ${Object.entries(this.character.stats).map(([stat, { value, progression }]) =>
+        ${Array.from(this.character.stats.entries()).map(([stat, { value, progression }]) =>
           statBoxTemplate(stat, value, progression),
         )}]))}
       </stats-content>
       <skills-content ?hidden=${this.category !== 'skills'}>
-        ${Object.entries(this.character.skills).map(([skill, { level, progress }]) =>
+        ${Array.from(this.character.skills.entries).map(([skill, { level, progress }]) =>
           statBoxTemplate(skill, level, progress),
         )}
       </skills-content>
@@ -185,9 +189,19 @@ class CharacterContent extends LitElement {
         .items=${this.items}
         .character=${this.character}
         ?hidden=${this.category !== 'equipment'}
+        @equipment-closed=${() => {
+          this.requestUpdate();
+        }}
       >
         ${this.equipmentSlots.map(
-          slot => html` <button @click=${this.showEquipment(slot)}>${slot}</button> `,
+          slot =>
+            html`<button
+              ?disabled=${slot === 'secondary hand' &&
+              !this.character.equipment.get('primary hand')}
+              @click=${this.showEquipment(slot)}
+            >
+              ${slot}
+            </button> `,
         )}
       </equipment-content>
     `;
