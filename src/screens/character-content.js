@@ -2,6 +2,8 @@ import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
+import { dieDisplay } from '../utils/dieDisplay.js';
+import { Inventory } from '../services/Inventory.js';
 
 function statBoxTemplate(stat, value, progress) {
   return html`
@@ -23,12 +25,12 @@ class CharacterContent extends LitElement {
           box-sizing: border-box;
         }
         :host {
-          height: 100%;
           width: 100%;
-          display: flex;
+          display: grid;
           flex-direction: column;
           padding: 8px;
           gap: 8px;
+          grid-template-rows: max-content max-content max-content 1fr max-content;
         }
         input {
           width: 100%;
@@ -38,7 +40,7 @@ class CharacterContent extends LitElement {
           border-image: initial;
           background: none;
           border-bottom: 1px solid var(--primary-color);
-          color: var(--primary-color);
+          color: white;
           font-family: VT323;
           font-size: 24px;
         }
@@ -59,10 +61,11 @@ class CharacterContent extends LitElement {
           color: white;
           text-shadow: black 0px 0px 4px;
         }
-        #image-section {
+        #status-section {
           height: 128px;
           display: flex;
-          justify-content: center;
+          justify-content: flex-start;
+          gap: 8px;
         }
         #avatar {
           height: 100%;
@@ -91,12 +94,51 @@ class CharacterContent extends LitElement {
           background-color: var(--primary-color);
           color: var(--primary-dark);
         }
+        .equipment-slot[equipped] {
+          color: var(--accent-color);
+          border-color: var(--accent-color);
+          justify-content: space-between;
+          flex-flow: row-reverse;
+        }
+        .equipment-slot[equipped] .slot-name {
+          font-size: 0.5em;
+          align-self: flex-end;
+        }
+        .item-name {
+          text-align: left;
+        }
+        #status {
+          display: flex;
+          flex-direction: column;
+          color: white;
+          justify-content: space-around;
+          width: 100%;
+        }
+        .stat {
+          display: flex;
+          justify-content: space-between;
+        }
+        #selection {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
+          max-height: 100%;
+          overflow: auto;
+        }
+        #recruit {
+          justify-content: center;
+        }
       `,
     ];
   }
 
   static get properties() {
-    return { character: Object, category: String, items: Array };
+    return {
+      character: Object,
+      category: String,
+      inventory: Object,
+      recruits: { type: Boolean, reflect: true },
+    };
   }
 
   constructor() {
@@ -118,8 +160,8 @@ class CharacterContent extends LitElement {
       'neck',
       'body',
       'hands',
-      'feet',
-      'fingers',
+      'boots',
+      'ring',
     ];
   }
 
@@ -143,23 +185,47 @@ class CharacterContent extends LitElement {
 
   showEquipment(category) {
     return async () => {
-      if (!this.items) {
-        const { randomItem } = await import('../utils/randomItem.js');
-        this.items = await Promise.all(
-          Array(20)
-            .fill(0)
-            .map(() => randomItem()),
-        );
+      if (!this.inventory) {
+        const { Inventory } = await import('../services/Inventory.js');
+        this.inventory = new Inventory();
+        await this.inventory.ready;
+        await Promise.all([...this.inventory.items.map(item => item.initialized)]);
+        this.requestUpdate();
       }
       this.shadowRoot.querySelector('equipment-content').showEquipment(category);
     };
   }
 
+  recruit() {
+    this.dispatchEvent(
+      new CustomEvent('recruited', { detail: this.character, composed: true, bubbles: true }),
+    );
+  }
+
+  secondaryHandDisabled(slot) {
+    if (slot !== 'secondary hand') return false;
+    const primary = this.character.equipment.get('primary hand');
+    if (!primary) return true;
+    const secondary = this.character.equipment.get('secondary hand');
+    if (secondary) return false;
+    if (primary && this.character.handsFull) return true;
+    return false;
+  }
+
   render() {
+    if (!this.character) return html``;
     return html`
       <input type="text" value=${this.character.name || 'name'} @input=${this.updateName} />
-      <div id="image-section">
+      <div id="status-section">
         <img id="avatar" src=${this.character.avatar.image} />
+        <div id="status">
+          <div class="stat"><span>hp</span><span>${this.character.maxhp}</span></div>
+          <div class="stat"><span>mana</span><span>${this.character.maxmana}</span></div>
+          <div class="stat">
+            <span>damage</span><span>${dieDisplay(...this.character.damage)}</span>
+          </div>
+          <div class="stat"><span>range</span><span>${this.character.attackRange}</span></div>
+        </div>
       </div>
       <div id="selector">
         <button ?selected=${this.category === 'stats'} @click=${this.categorySelect('stats')}>
@@ -175,35 +241,40 @@ class CharacterContent extends LitElement {
           Equipment
         </button>
       </div>
-      <stats-content ?hidden=${this.category !== 'stats'}>
-        ${Array.from(this.character.stats.entries()).map(([stat, { value, progression }]) =>
-          statBoxTemplate(stat, value, progression),
-        )}]))}
-      </stats-content>
-      <skills-content ?hidden=${this.category !== 'skills'}>
-        ${Array.from(this.character.skills.entries).map(([skill, { level, progress }]) =>
-          statBoxTemplate(skill, level, progress),
-        )}
-      </skills-content>
-      <equipment-content
-        .items=${this.items}
-        .character=${this.character}
-        ?hidden=${this.category !== 'equipment'}
-        @equipment-closed=${() => {
-          this.requestUpdate();
-        }}
-      >
-        ${this.equipmentSlots.map(
-          slot =>
-            html`<button
-              ?disabled=${slot === 'secondary hand' &&
-              !this.character.equipment.get('primary hand')}
-              @click=${this.showEquipment(slot)}
-            >
-              ${slot}
-            </button> `,
-        )}
-      </equipment-content>
+      <div id="selection">
+        <stats-content ?hidden=${this.category !== 'stats'}>
+          ${Array.from(this.character.stats.entries()).map(([stat, { value, progression }]) =>
+            statBoxTemplate(stat, value, progression),
+          )}]))}
+        </stats-content>
+        <skills-content ?hidden=${this.category !== 'skills'}>
+          ${Array.from(this.character.skills.entries).map(([skill, { level, progress }]) =>
+            statBoxTemplate(skill, level, progress),
+          )}
+        </skills-content>
+        <equipment-content
+          .inventory=${this.inventory}
+          .character=${this.character}
+          ?hidden=${this.category !== 'equipment'}
+          @equipment-closing=${() => {
+            this.requestUpdate();
+          }}
+        >
+          ${this.equipmentSlots.map(
+            slot =>
+              html`<button
+                class="equipment-slot"
+                ?equipped=${this.character.equipment.get(slot)}
+                ?disabled=${this.secondaryHandDisabled(slot)}
+                @click=${this.showEquipment(slot)}
+              >
+                <span class="slot-name">${slot}</span>
+                <span class="item-name">${this.character.equipment.get(slot)?.name}</span>
+              </button> `,
+          )}
+        </equipment-content>
+      </div>
+      ${this.recruits && html`<button id="recruit" @click=${this.recruit}>RECRUIT</button>`}
     `;
   }
 }

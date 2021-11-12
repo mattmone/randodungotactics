@@ -45,7 +45,7 @@ class EquipmentContent extends LitElement {
       itemLocation: String,
       selectedCatgory: String,
       detailItem: Object,
-      items: Array,
+      inventory: Object,
       character: Object,
     };
   }
@@ -78,18 +78,26 @@ class EquipmentContent extends LitElement {
     };
   }
 
-  equip({ detail: item }) {
-    this.character.equip(this.selectedCatgory, this.items.splice(this.items.indexOf(item), 1)[0]);
+  async equip({ detail: item }) {
+    const removedItem = this.character.equip(this.selectedCatgory, item);
+    this.inventory.remove(item);
+    if (removedItem) this.inventory.add(removedItem);
     this.requestUpdate();
   }
 
-  #equipmentScreenClosed() {
-    this.dispatchEvent(new CustomEvent('equipment-closed'));
+  async unequip() {
+    const removedItem = this.character.unequip(this.selectedCatgory);
+    if (removedItem) this.inventory.add(removedItem);
+    this.requestUpdate();
+  }
+
+  #equipmentScreenClosing() {
+    this.dispatchEvent(new CustomEvent('equipment-closing'));
   }
 
   render() {
     return html`<slot></slot>
-      <side-screen id="equipment" @close=${this.#equipmentScreenClosed}>
+      <side-screen id="equipment" @before-close=${this.#equipmentScreenClosing}>
         <div id="equipment-locations">
           ${this.equippedEntries
             ?.filter(([location, item]) => location === this.selectedCatgory)
@@ -97,17 +105,28 @@ class EquipmentContent extends LitElement {
               ([location, item]) =>
                 html` <button equipped @click=${this.showDetail(item)}>${item.name}</button> `,
             )}
-          ${this.items
+          ${this.inventory?.items
             ?.filter(
               item =>
                 this.itemLocation.includes(item.type) || this.itemLocation.includes(item.slot),
             )
-            .map(item => html` <button @click=${this.showDetail(item)}>${item.name}</button> `)}
+            .map(
+              item =>
+                html`
+                  <button
+                    ?hidden=${this.selectedCatgory === 'secondary hand' && item.hands >= 2}
+                    @click=${this.showDetail(item)}
+                  >
+                    ${item.name}
+                  </button>
+                `,
+            )}
         </div>
         <side-screen id="details">
           <detail-content
             ?equipped=${this.equippedItems.includes(this.detailItem)}
             @equip-item=${this.equip}
+            @unequip-item=${this.unequip}
             .item=${this.detailItem}
           ></detail-content>
         </side-screen>

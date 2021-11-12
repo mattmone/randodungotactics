@@ -1,15 +1,10 @@
 import { Item } from './Item.js';
 
 export class Weapon extends Item {
-  /**
-   *
-   * @param {WeaponParams} weaponParams
-   */
-  constructor(weaponParams) {
-    super(weaponParams);
-    /** @type {Number} */
+  initialize(weaponParams, skipSave) {
     this.range = weaponParams.range || 1;
     this.hands = weaponParams.hands || 1;
+    super.initialize(weaponParams, skipSave);
   }
 
   get type() {

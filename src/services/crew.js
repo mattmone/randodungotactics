@@ -1,6 +1,7 @@
 import { Character } from '../character.js';
 import { oneOf } from '../utils/oneOf.js';
 import { get, set, del } from '../../libs/idb-keyval.js';
+import { rollDice } from '../utils/rollDice.js';
 
 const names = [
   'Liam',
@@ -254,7 +255,7 @@ export class Crew {
     this.id = id;
     get(`crew/${id}`).then(async crew => {
       if (crew) this.#members = crew.map(member => new Character({ id: member }));
-      else this.random({ quantity: 5 });
+      else this.random({});
       await Promise.all(this.#members.map(member => member.initialized));
       this.#ready = true;
     });
@@ -287,23 +288,26 @@ export class Crew {
     }, 100);
   }
 
-  add(character = {}) {
-    const newMember = new Character(character);
+  add(member = {}) {
+    const newMember = member instanceof Character ? member : new Character(member);
     this.#members = [...this.members, newMember];
     this.#saveCrew();
+    return newMember;
   }
 
-  remove(characterid) {
-    this.#members = this.members.filter(character => character.id !== characterid);
+  remove(removedMember, nonDestructive) {
+    this.#members = this.members.filter(member => member !== removedMember);
+    console.log('destroying member', removedMember.name);
+    if (!nonDestructive) removedMember.destroy();
     this.#saveCrew();
   }
 
-  random({ quantity = 1, level = 1 }) {
+  random({ quantity, level } = { quantity: 1, level: 1 }) {
     for (let i = 0; i < quantity; i++) {
-      const character = {};
-      character.name = oneOf(names);
-      character.color = oneOf(colors);
-      character.stats = new Map([
+      const characterOptions = {};
+      characterOptions.name = oneOf(names);
+      characterOptions.color = oneOf(colors);
+      characterOptions.stats = new Map([
         [
           'strength',
           { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
@@ -338,7 +342,28 @@ export class Crew {
           { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
         ],
       ]);
-      this.add(character);
+      const character = this.add(characterOptions);
+      import('../utils/randomItem.js').then(
+        async ({
+          randomHead,
+          randomBody,
+          randomBoots,
+          randomOneHanded,
+          randomTwoHanded,
+          randomRanged,
+          randomHands,
+        }) => {
+          character.equip(
+            'primary hand',
+            await oneOf([randomOneHanded, randomTwoHanded, randomRanged])(),
+          );
+          if (rollDice(6) >= 3) character.equip('body', await randomBody());
+          if (rollDice(6) >= 4) character.equip('head', await randomHead());
+          if (rollDice(6) >= 5) character.equip('boots', await randomBoots());
+          if (rollDice(6) >= 6) character.equip('hands', await randomHands());
+          console.log(character);
+        },
+      );
     }
   }
 }

@@ -54,7 +54,8 @@ class DetailContent extends LitElement {
   }
 
   equip() {
-    this.dispatchEvent(new CustomEvent('equip-item', { detail: this.item }));
+    if (this.equipped) this.dispatchEvent(new CustomEvent('unequip-item', { detail: this.item }));
+    else this.dispatchEvent(new CustomEvent('equip-item', { detail: this.item }));
   }
 
   render() {

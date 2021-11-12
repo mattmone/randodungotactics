@@ -1,11 +1,30 @@
 import { rollDice } from '../utils/rollDice.js';
+import { get, set, createStore, del } from '../../libs/idb-keyval.js';
+
+const idbStore = createStore('items', 'itemStore');
 
 export class Item {
+  _initialized = false;
+  #saveTimeout = null;
   /**
    *
    * @param {ItemParams} param0
    */
-  constructor({ power = 1, strength = 1, name, effects = new Map() }) {
+  constructor({ id, power = 1, strength = 1, name, effects = new Map() }) {
+    if (id) {
+      this.id = id;
+      this.hydrate(id);
+      return this;
+    } else this.id = crypto.randomUUID();
+    this.initialize({ power, strength, name, effects });
+  }
+
+  async hydrate(id) {
+    const item = await get(id, idbStore);
+    this.initialize(item, true);
+  }
+
+  initialize({ power, strength, name, effects }, skipSave) {
     /** @type {String} */
     this.name = name;
     /** @type {Number} */
@@ -16,6 +35,25 @@ export class Item {
     this.durability = this.maxdurability;
     /** @type {Map<String,Effect>} */
     this.effects = effects;
+    this.itemType = this.constructor.name;
+    if (!skipSave) this.#saveItem();
+    this._initialized = true;
+  }
+
+  get initialized() {
+    return new Promise(resolve => {
+      setInterval(() => {
+        if (this._initialized) resolve(true);
+      }, 10);
+    });
+  }
+
+  #saveItem() {
+    clearTimeout(this.#saveTimeout);
+    this.#saveTimeout = setTimeout(() => {
+      if (this.destroyed) return;
+      set(this.id, this.serialized, idbStore);
+    }, 100);
   }
 
   get serialized() {
@@ -49,6 +87,11 @@ export class Item {
   repair(amount = this.repairsNeeded) {
     this.durability += amount;
     return amount;
+  }
+
+  destroy() {
+    this.destroyed = true;
+    del(this.id, idbStore);
   }
 }
 

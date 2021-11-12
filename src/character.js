@@ -37,12 +37,11 @@ const idbStore = createStore('characters', 'characterStore');
 
 function rebuild(key, value) {
   const type = {
-    'primary hand': Weapon,
-    'secondary hand': Weapon,
-    body: Body,
-    hands: Hands,
-    head: Head,
-    feet: Boots,
+    Weapon: Weapon,
+    Body: Body,
+    Hands: Hands,
+    Head: Head,
+    Boots: Boots,
   };
   return new type[key](value);
 }
@@ -60,6 +59,7 @@ export class Character {
   #hp;
   #mana;
   #initialized = false;
+  #created;
   /**
    * creates a Character instance
    * @param {CharacterOptions} options
@@ -115,6 +115,7 @@ export class Character {
       direction: this.direction,
       hp: this.hp,
       mana: this.mana,
+      created: this.#created,
     };
   }
 
@@ -136,6 +137,7 @@ export class Character {
     direction,
     hp,
     mana,
+    created = new Date(),
   }) {
     this.id = id;
     this.name = name;
@@ -147,17 +149,25 @@ export class Character {
     this.effects = effects;
     this.modifiers = modifiers;
     this.equipment = new Map(
-      Array.from(equipment.entries()).map(([key, value]) => [key, rebuild(key, value)]),
+      equipment
+        ? Array.from(equipment.entries()).map(([key, value]) => [
+            key,
+            rebuild(value.itemType, value),
+          ])
+        : [],
     );
     this.direction = direction;
     this.hp = hp;
     this.mana = mana;
+    this.#created = created;
     this.#initialized = true;
   }
 
   #saveCharacter() {
     clearTimeout(this.#saveTimeout);
     this.#saveTimeout = setTimeout(() => {
+      if (this.destroyed) return;
+      console.log('setting', this.id, this.name);
       set(this.id, this.serialized, idbStore);
     }, 100);
   }
@@ -234,6 +244,10 @@ export class Character {
       }, 10);
     });
   }
+  get created() {
+    return this.#created || new Date();
+  }
+
   get availableHands() {
     return (
       2 -
@@ -259,8 +273,8 @@ export class Character {
 
   get damage() {
     return [
-      (this.equipment.get('primary')?.strength || 0) + this.stats.get('strength').value,
-      (this.equipment.get('primary')?.power || 0) + this.stats.get('dexterity').value,
+      (this.equipment.get('primary hand')?.strength || 0) + this.stats.get('strength').value,
+      (this.equipment.get('primary hand')?.power || 0) + this.stats.get('dexterity').value,
     ];
   }
 
@@ -343,6 +357,14 @@ export class Character {
     this.#saveCharacter();
   }
 
+  get handsFull() {
+    return (
+      (this.equipment.get('primary hand')?.hands || 0) +
+        (this.equipment.get('secondary hand')?.hands || 0) >=
+      2
+    );
+  }
+
   setup() {
     /** @type {Number} */
     this.hp = this.maxhp;
@@ -356,8 +378,17 @@ export class Character {
   }
 
   equip(category, item) {
+    const removedItem = this.equipment.get(category);
     this.equipment.set(category, item);
     this.#saveCharacter();
+    return removedItem;
+  }
+
+  unequip(category) {
+    const removedItem = this.equipment.get(category);
+    this.equipment.delete(category);
+    this.#saveCharacter();
+    return removedItem;
   }
 
   degradeWeapon(damage, secondary) {
@@ -371,5 +402,10 @@ export class Character {
     damage -= this.equipment.get('gloves')?.degrade(damage) || 0;
     damage -= this.equipment.get('boots')?.degrade(damage) || 0;
     this.hp -= damage;
+  }
+  destroy() {
+    this.destroyed = true;
+    for (const item of this.equipment.values()) item.destroy();
+    del(this.id, idbStore);
   }
 }

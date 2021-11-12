@@ -63,14 +63,24 @@ class CrewContent extends LitElement {
   }
 
   selectCrew(member) {
-    return () => {
-      import('./character-content.js');
+    return async () => {
+      await import('./character-content.js');
       this.selectedMember = member;
       this.shadowRoot.getElementById('character-screen').toggleAttribute('open');
     };
   }
 
-  characterScreenClosed() {
+  async showRecruits() {
+    await import('./recruit-content.js');
+    this.shadowRoot.getElementById('recruit-screen').toggleAttribute('open');
+  }
+
+  recruit({ detail: newMember }) {
+    this.crew.add(newMember);
+    this.shadowRoot.getElementById('recruit-screen').toggleAttribute('open');
+  }
+
+  screenClosed() {
     this.requestUpdate();
   }
 
@@ -84,9 +94,12 @@ class CrewContent extends LitElement {
           </button>`,
         )}
       </section>
-      <button id="recruit">RECRUIT</button>
-      <side-screen @before-close=${this.characterScreenClosed} id="character-screen">
+      <button id="recruit" @click=${this.showRecruits}>RECRUIT</button>
+      <side-screen @before-close=${this.screenClosed} id="character-screen">
         <character-content .character=${this.selectedMember}></character-content>
+      </side-screen>
+      <side-screen @before-close=${this.screenClosed} id="recruit-screen">
+        <recruit-content @recruited=${this.recruit}></recruit-content>
       </side-screen>
     `;
   }
