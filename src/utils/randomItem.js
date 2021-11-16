@@ -5,17 +5,26 @@ const bodyNames = ['curiass', 'breastplate', 'chestplate', 'vest', 'chestpiece']
 const bootNames = ['boots', 'shoes', 'greaves', 'footguards'];
 const handNames = ['gloves', 'gauntlets', 'bracer', 'vambrace'];
 const headNames = ['helm', 'helmet', 'crown', 'hood', 'headguard'];
-const oneHandedNames = ['sword', 'longsword', 'dagger', 'dirk', 'knife', 'broadsword', 'axe'];
-const twoHandedNames = ['greatsword', 'claymore', 'flamberge', 'pike', 'halbard'];
-const rangedNames = ['crossbow', 'shortbow', 'longbow', 'bow', 'sling'];
+const swordNames = ['sword', 'longsword', 'broadsword', 'rapier'];
+const knifeNames = ['knife', 'dagger', 'stiletto', 'shank', 'sabre'];
+const axeNames = ['axe', 'battleaxe', 'waraxe', 'greataxe'];
+const polearmNames = ['polearm', 'spear', 'trident', 'lance', 'pike', 'halberd'];
+const shortbowNames = ['bow', 'shortbow', 'hornbow', 'saddlebow'];
+const longbowNames = ['longbow', 'compositebow'];
+const crossbowNames = ['crossbow', 'arbalest'];
+const shieldNames = ['shield', 'buckler', 'kite', 'tower', 'pavise', 'scutum'];
 const randomItems = [
   randomBody,
   randomBoots,
   randomHands,
   randomHead,
-  randomOneHanded,
-  randomTwoHanded,
-  randomRanged,
+  randomSword,
+  randomKnife,
+  randomAxe,
+  randomPolearm,
+  randomShortbow,
+  randomLongbow,
+  randomCrossbow,
 ];
 
 function rollStat({ stat = 1, level = 1, maximum = level * 100 }) {
@@ -64,23 +73,93 @@ export async function randomHead(level) {
   const item = new Head({ power, strength, name: oneOf(headNames) });
   return item;
 }
-async function randomWeapon(level, hands, powerModifier, range, name) {
+async function randomWeapon({ level, hands, powerModifier, range, name, subType, category }) {
   const { Weapon } = await import('../items/Weapon.js');
   // let effects = [];
   // while(rollDice(20) >= 21-level)
   const power = Math.ceil(rollStat({ level }) * powerModifier);
   const strength = rollStat({ level });
-  const item = new Weapon({ power, strength, hands, range, name });
+  const item = new Weapon({ power, strength, hands, range, name, subType, category });
   return item;
 }
-export async function randomOneHanded(level) {
-  return await randomWeapon(level, 1, 1, 1, oneOf(oneHandedNames));
+export async function randomSword(level) {
+  return await randomWeapon({
+    level,
+    hands: 1,
+    powerModifier: 1.5,
+    range: 1,
+    name: oneOf(swordNames),
+    category: 'melee',
+    subType: 'sword',
+  });
 }
-export async function randomTwoHanded(level) {
-  return await randomWeapon(level, 2, 1.5, 1, oneOf(twoHandedNames));
+export async function randomAxe(level) {
+  return await randomWeapon({
+    level,
+    hands: 1,
+    powerModifier: 1.5,
+    range: 1,
+    name: oneOf(axeNames),
+    category: 'melee',
+    subType: 'axe',
+  });
 }
-export async function randomRanged(level) {
-  return await randomWeapon(level, 2, 1, 5, oneOf(rangedNames));
+export async function randomKnife(level) {
+  return await randomWeapon({
+    level,
+    hands: 1,
+    powerModifier: 1,
+    range: 1,
+    name: oneOf(knifeNames),
+    category: 'melee',
+    subType: 'knife',
+  });
+}
+
+export async function randomPolearm(level) {
+  return await randomWeapon({
+    level,
+    hands: 2,
+    powerModifier: 2,
+    range: 2,
+    name: oneOf(polearmNames),
+    category: 'melee',
+    subType: 'polearm',
+  });
+}
+
+export async function randomShortbow(level) {
+  return await randomWeapon({
+    level,
+    hands: 2,
+    powerModifier: 1,
+    range: 4,
+    name: oneOf(shortbowNames),
+    category: 'ranged',
+    subType: 'shortbow',
+  });
+}
+export async function randomLongbow(level) {
+  return await randomWeapon({
+    level,
+    hands: 2,
+    powerModifier: 2,
+    range: 6,
+    name: oneOf(longbowNames),
+    category: 'ranged',
+    subType: 'longbow',
+  });
+}
+export async function randomCrossbow(level) {
+  return await randomWeapon({
+    level,
+    hands: 2,
+    powerModifier: 3,
+    range: 3,
+    name: oneOf(crossbowNames),
+    category: 'ranged',
+    subType: 'crossbow',
+  });
 }
 export async function randomItem(level) {
   return oneOf(randomItems)(level);

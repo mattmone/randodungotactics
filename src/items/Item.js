@@ -6,17 +6,19 @@ const idbStore = createStore('items', 'itemStore');
 export class Item {
   _initialized = false;
   #saveTimeout = null;
+  #created;
   /**
    *
    * @param {ItemParams} param0
    */
-  constructor({ id, power = 1, strength = 1, name, effects = new Map() }) {
-    if (id) {
-      this.id = id;
-      this.hydrate(id);
+  constructor(itemParamsRaw) {
+    const itemParams = { ...itemParamsRaw, ...{ power: 1, strength: 1, effects: new Map() } };
+    if (itemParams.id) {
+      this.id = itemParams.id;
+      this.hydrate(itemParams.id);
       return this;
     } else this.id = crypto.randomUUID();
-    this.initialize({ power, strength, name, effects });
+    this.initialize(itemParams);
   }
 
   async hydrate(id) {
@@ -24,7 +26,7 @@ export class Item {
     this.initialize(item, true);
   }
 
-  initialize({ power, strength, name, effects }, skipSave) {
+  initialize({ power, strength, name, effects, created = new Date() }, skipSave) {
     /** @type {String} */
     this.name = name;
     /** @type {Number} */
@@ -38,6 +40,7 @@ export class Item {
     this.itemType = this.constructor.name;
     if (!skipSave) this.#saveItem();
     this._initialized = true;
+    this.#created = created;
   }
 
   get initialized() {
@@ -57,7 +60,11 @@ export class Item {
   }
 
   get serialized() {
-    return { ...this };
+    return { ...this, created: this.created };
+  }
+
+  get created() {
+    return this.#created || new Date();
   }
 
   get maxdurability() {
@@ -74,9 +81,10 @@ export class Item {
    * @returns {Number}
    */
   degrade(damage) {
+    if (this.durability <= 0) return 0;
     const soak = rollDice(this.power, this.strength) + (this.modifier?.soak || 0);
     this.durability -= soak;
-    return damage - soak;
+    return soak;
   }
 
   /**

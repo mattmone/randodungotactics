@@ -302,60 +302,82 @@ export class Crew {
     this.#saveCrew();
   }
 
+  disband() {
+    this.#members.forEach(member => member.destroy());
+    this.#members = [];
+    this.#saveCrew();
+  }
+
   random({ quantity, level } = { quantity: 1, level: 1 }) {
     for (let i = 0; i < quantity; i++) {
       const characterOptions = {};
       characterOptions.name = oneOf(names);
       characterOptions.color = oneOf(colors);
       characterOptions.stats = new Map([
-        [
-          'strength',
-          { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
-        ],
+        ['strength', { value: 1, progression: rollDice(99) }],
         [
           'constitution',
           {
-            value: Math.ceil(Math.random() * 10),
-            progression: Math.ceil(Math.random() * 100),
+            value: 1,
+            progression: rollDice(99),
           },
         ],
         [
           'dexterity',
           {
-            value: Math.ceil(Math.random() * 10),
-            progression: Math.ceil(Math.random() * 100),
+            value: 1,
+            progression: rollDice(99),
           },
         ],
-        [
-          'speed',
-          { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
-        ],
+        ['speed', { value: 1, progression: rollDice(99) }],
         [
           'intellect',
           {
-            value: Math.ceil(Math.random() * 10),
-            progression: Math.ceil(Math.random() * 100),
+            value: 1,
+            progression: rollDice(99),
           },
         ],
-        [
-          'magic',
-          { value: Math.ceil(Math.random() * 10), progression: Math.ceil(Math.random() * 100) },
-        ],
+        ['magic', { value: 1, progression: rollDice(99) }],
       ]);
+      let points = 4 * 6 * level;
+      const stats = Array.from(characterOptions.stats.keys());
+      while (points > 0) {
+        const stat = oneOf(stats);
+        const statValue = characterOptions.stats.get(stat).value;
+        if (statValue <= level * 10) {
+          characterOptions.stats.set(stat, {
+            ...characterOptions.stats.get(stat),
+            value: statValue + 1,
+          });
+          points--;
+        }
+      }
       const character = this.add(characterOptions);
       import('../utils/randomItem.js').then(
         async ({
           randomHead,
           randomBody,
           randomBoots,
-          randomOneHanded,
-          randomTwoHanded,
-          randomRanged,
+          randomSword,
+          randomAxe,
+          randomPolearm,
+          randomKnife,
+          randomShortbow,
+          randomLongbow,
+          randomCrossbow,
           randomHands,
         }) => {
           character.equip(
             'primary hand',
-            await oneOf([randomOneHanded, randomTwoHanded, randomRanged])(),
+            await oneOf([
+              randomSword,
+              randomAxe,
+              randomPolearm,
+              randomKnife,
+              randomShortbow,
+              randomLongbow,
+              randomCrossbow,
+            ])(),
           );
           if (rollDice(6) >= 3) character.equip('body', await randomBody());
           if (rollDice(6) >= 4) character.equip('head', await randomHead());

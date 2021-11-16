@@ -4,6 +4,8 @@ export class Weapon extends Item {
   initialize(weaponParams, skipSave) {
     this.range = weaponParams.range || 1;
     this.hands = weaponParams.hands || 1;
+    this.subType = weaponParams.subType || 'sword';
+    this.category = weaponParams.category || 'melee';
     super.initialize(weaponParams, skipSave);
   }
 

@@ -31,7 +31,8 @@ import { Crew } from '../services/crew.js';
 const characters = new Crew();
 
 const enemies = new Crew('enemy');
-
+if (enemies.members.length > 0) enemies.disband();
+enemies.random({ quantity: 5, level: 2 });
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
 };
@@ -371,6 +372,7 @@ class GameMap {
     this.currentTime = 0;
     this.currentParticipant = this.participants[0];
     this.focus();
+    if (enemies.members.includes(this.currentParticipant)) return this.performTurn();
     return this.currentParticipant.passable;
   }
 
@@ -389,15 +391,118 @@ class GameMap {
     this.markInteractibles(this.currentParticipant.attackRange, this.phase);
   }
 
-  markInteractibles(range, action) {
+  #determineInteractible = {
+    action: range => {
+      const tiles =
+        this.currentParticipant.equipment.get('primary hand').category === 'melee'
+          ? this.hackItOut(this.currentParticipant.tile, range)
+          : this.rangeItOut(this.currentParticipant.tile, range);
+      return Array.from(new Set(tiles));
+    },
+    move: range => {
+      const tiles = this.walkItOut(this.currentParticipant.tile, range);
+      return Array.from(new Set(tiles));
+    },
+  };
+
+  rangeItOut(startingTile, range, priorDirection) {
+    const tiles = [];
+    for (let direction = 0; direction < 4; direction++) {
+      if (direction === priorDirection) continue;
+      let remainingRange = range;
+      let currentTile = startingTile;
+      const nextTilePosition = { ...currentTile.position };
+      if (direction === 0) nextTilePosition.z += 1;
+      else if (direction === 1) nextTilePosition.x += 1;
+      else if (direction === 2) nextTilePosition.z -= 1;
+      else if (direction === 3) nextTilePosition.x -= 1;
+      const nextTile = this.map.children.find(tile =>
+        positionEquals(tile.position, nextTilePosition),
+      );
+      if (!nextTile) continue;
+      const tileParticipant = this.participants.find(participant => nextTile === participant.tile);
+      let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+      if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.4);
+      let modifier = 0;
+      if (nextTile.userData.tree) modifier += 0.8;
+      if (nextTile.userData.rock) modifier += 0.2;
+      if (tileParticipant) modifier += 0.8;
+      let rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
+      remainingRange -= rangeDelta;
+      currentTile = nextTile;
+      if (remainingRange > 0) {
+        tiles.push(nextTile);
+        tiles.push(...this.rangeItOut(currentTile, remainingRange, (direction + 2) % 4));
+      }
+    }
+    return tiles;
+  }
+
+  hackItOut(startingTile, range) {
+    const tiles = [];
+    for (let direction = 0; direction < 4; direction++) {
+      let remainingRange = range;
+      let currentTile = startingTile;
+      const nextTilePosition = { ...currentTile.position };
+      if (direction === 0) nextTilePosition.z += 1;
+      else if (direction === 1) nextTilePosition.x += 1;
+      else if (direction === 2) nextTilePosition.z -= 1;
+      else if (direction === 3) nextTilePosition.x -= 1;
+      const nextTile = this.map.children.find(tile =>
+        positionEquals(tile.position, nextTilePosition),
+      );
+      if (!nextTile) continue;
+      const elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+      let modifier = 0;
+      if (nextTile.userData.rock) modifier += 0.8;
+      let rangeDelta = elevationChange + modifier;
+      remainingRange -= rangeDelta;
+      currentTile = nextTile;
+      if (remainingRange > 0) {
+        tiles.push(nextTile);
+      }
+    }
+    return tiles;
+  }
+
+  walkItOut(startingTile, range, priorDirection) {
+    const tiles = [];
+    for (let direction = 0; direction < 4; direction++) {
+      if (direction === priorDirection) continue;
+      let remainingRange = range;
+      let currentTile = startingTile;
+      const nextTilePosition = { ...currentTile.position };
+      if (direction === 0) nextTilePosition.z += 1;
+      else if (direction === 1) nextTilePosition.x += 1;
+      else if (direction === 2) nextTilePosition.z -= 1;
+      else if (direction === 3) nextTilePosition.x -= 1;
+      const nextTile = this.map.children.find(tile =>
+        positionEquals(tile.position, nextTilePosition),
+      );
+      if (!nextTile) continue;
+      const tileParticipant = this.participants.find(participant => nextTile === participant.tile);
+      if (!nextTile.userData.tree && !tileParticipant) tiles.push(nextTile);
+      let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+      if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.3);
+      let modifier = 0;
+      if (nextTile.userData.tree) modifier += 0.4;
+      if (nextTile.userData.rock) modifier += 0.8;
+      if (nextTile.userData.texture === 'road') modifier -= 0.2;
+      if (nextTile.userData.texture === 'smallRoad') modifier -= 0.1;
+      if (nextTile.userData.texture === 'snow') modifier += 0.4;
+      let rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
+      remainingRange -= rangeDelta;
+      currentTile = nextTile;
+      if (remainingRange > 0) {
+        tiles.push(...this.walkItOut(currentTile, remainingRange, (direction + 2) % 4));
+      }
+    }
+    return tiles;
+  }
+
+  async markInteractibles(range, action) {
     this.clearInteractible();
-    this.interactible = this.map.children.filter(
-      tile =>
-        tile.position.distanceTo(this.currentParticipant.tile.position) <= range + 0.2 &&
-        !tile.userData.tree &&
-        tile.userData.texture !== 'water' &&
-        !positionEquals(tile.position, this.currentParticipant.tile.position),
-    );
+    this.interactible = await this.#determineInteractible[action](range);
     this.interactible.forEach(tile => {
       const material = new MeshBasicMaterial({
         map: new CanvasTexture(createTerrainSide('interactable')),
@@ -479,7 +584,16 @@ class GameMap {
     this.currentTime = this.currentParticipant.nextMove;
     if (this.currentParticipant.dead) return this.endTurn();
     this.focus();
+    if (enemies.members.includes(this.currentParticipant)) return this.performTurn();
     return this.currentParticipant.passable;
+  }
+
+  performTurn() {
+    return this.endTurn();
+    if (!this.currentParticipant.personality)
+      this.currentParticipant.personality = oneOf(['aggressive', 'support', 'defensive']);
+    if (this.currentParticipant.personality === 'aggressive') {
+    }
   }
 
   createMoveAnimation({
