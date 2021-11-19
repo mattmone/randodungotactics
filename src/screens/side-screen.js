@@ -35,14 +35,25 @@ class SideScreen extends LitElement {
           transition-delay: 0.05s;
           display: grid;
           grid-template-rows: 45px calc(100% - 45px);
+          grid-template-columns: 1fr;
         }
         ::slotted(*) {
           height: 100%;
           overflow-y: auto;
           overflow-x: hidden;
         }
+        ::slotted(h1) {
+          grid-row: 1;
+          grid-column: 1;
+          margin: 0;
+          color: white;
+          font-size: 1.5rem;
+          display: flex;
+          align-items: flex-end;
+        }
         #close {
           grid-row: 1;
+          grid-column: 1;
           margin-top: 8px;
           margin-right: 8px;
           justify-self: flex-end;
@@ -57,16 +68,24 @@ class SideScreen extends LitElement {
     ];
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    this.querySelectorAll('[data-show-on-open]').forEach(el => el.toggleAttribute('hidden', false));
+  }
+
   attributeChangedCallback(name, oldVal, newVal) {
     super.attributeChangedCallback(name, oldVal, newVal);
     if (name === 'open') {
       const screen = this.shadowRoot.querySelector('.screen');
       if (this.hasAttribute('open')) {
         this._triggeredBy = document.activeElement;
+        this.dispatchEvent(new CustomEvent('before-open'));
+
         screen.addEventListener(
           'transitionend',
           () => {
             screen.focus();
+            this.dispatchEvent(new CustomEvent('open'));
           },
           { once: true },
         );
@@ -87,6 +106,7 @@ class SideScreen extends LitElement {
 
   render() {
     return html`<section tabindex="-1" class="screen">
+      <slot name="header"></slot>
       <slot></slot>
       <button id="close" @click=${() => this.removeAttribute('open')}>&gt;</button>
     </section>`;

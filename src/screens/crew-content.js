@@ -99,6 +99,7 @@ class CrewContent extends LitElement {
         <character-content .character=${this.selectedMember}></character-content>
       </side-screen>
       <side-screen @before-close=${this.screenClosed} id="recruit-screen">
+        <h1 slot="header" hidden data-show-on-open>Recruits</h1>
         <recruit-content @recruited=${this.recruit}></recruit-content>
       </side-screen>
     `;

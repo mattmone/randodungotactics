@@ -32,7 +32,7 @@ const characters = new Crew();
 
 const enemies = new Crew('enemy');
 if (enemies.members.length > 0) enemies.disband();
-enemies.random({ quantity: 5, level: 2 });
+enemies.random({ quantity: 5, level: 2, withEquipment: true });
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
 };
@@ -46,12 +46,12 @@ const sameTeam = (char1, char2) => {
 
 function turnSort(participant1, participant2) {
   let sort = 0;
-  if (participant1.stats.get('dexterity').value < participant2.stats.get('dexterity').value)
+  if (participant1.stats.get('dexterity').level < participant2.stats.get('dexterity').level)
     sort = 1;
-  if (participant1.stats.get('dexterity').value > participant2.stats.get('dexterity').value)
+  if (participant1.stats.get('dexterity').level > participant2.stats.get('dexterity').level)
     sort = -1;
-  if (participant1.stats.get('speed').value < participant2.stats.get('speed').value) sort = 1;
-  if (participant1.stats.get('speed').value > participant2.stats.get('speed').value) sort = -1;
+  if (participant1.stats.get('speed').level < participant2.stats.get('speed').level) sort = 1;
+  if (participant1.stats.get('speed').level > participant2.stats.get('speed').level) sort = -1;
   if (participant1.nextMove > participant2.nextMove) sort = 1;
   if (participant1.nextMove < participant2.nextMove) sort = -1;
   return sort;
@@ -369,6 +369,10 @@ class GameMap {
 
   async startBattle() {
     this.participants = [...this.placedCharacters, ...enemies.members].sort(turnSort);
+    this.participants.forEach(character => {
+      character.hp = character.maxhp;
+      character.mana = character.maxmana;
+    });
     this.currentTime = 0;
     this.currentParticipant = this.participants[0];
     this.focus();
@@ -394,13 +398,13 @@ class GameMap {
   #determineInteractible = {
     action: range => {
       const tiles =
-        this.currentParticipant.equipment.get('primary hand').category === 'melee'
+        this.currentParticipant.primaryAttack === 'melee'
           ? this.hackItOut(this.currentParticipant.tile, range)
           : this.rangeItOut(this.currentParticipant.tile, range);
       return Array.from(new Set(tiles));
     },
-    move: range => {
-      const tiles = this.walkItOut(this.currentParticipant.tile, range);
+    move: async range => {
+      const tiles = await this.walkItOut(this.currentParticipant.tile, range);
       return Array.from(new Set(tiles));
     },
   };
@@ -440,61 +444,65 @@ class GameMap {
 
   hackItOut(startingTile, range) {
     const tiles = [];
-    for (let direction = 0; direction < 4; direction++) {
-      let remainingRange = range;
-      let currentTile = startingTile;
-      const nextTilePosition = { ...currentTile.position };
-      if (direction === 0) nextTilePosition.z += 1;
-      else if (direction === 1) nextTilePosition.x += 1;
-      else if (direction === 2) nextTilePosition.z -= 1;
-      else if (direction === 3) nextTilePosition.x -= 1;
-      const nextTile = this.map.children.find(tile =>
-        positionEquals(tile.position, nextTilePosition),
-      );
-      if (!nextTile) continue;
-      const elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
-      let modifier = 0;
-      if (nextTile.userData.rock) modifier += 0.8;
-      let rangeDelta = elevationChange + modifier;
-      remainingRange -= rangeDelta;
-      currentTile = nextTile;
-      if (remainingRange > 0) {
-        tiles.push(nextTile);
+    const tileQueue = [[startingTile, range]];
+    while (tileQueue.length) {
+      const [currentTile, remainingRange] = tileQueue.shift();
+      for (let direction = 0; direction < 4; direction++) {
+        const nextTilePosition = { ...currentTile.position };
+        if (direction === 0) nextTilePosition.z += 1;
+        else if (direction === 1) nextTilePosition.x += 1;
+        else if (direction === 2) nextTilePosition.z -= 1;
+        else if (direction === 3) nextTilePosition.x -= 1;
+        const nextTile = this.map.children.find(tile =>
+          positionEquals(tile.position, nextTilePosition),
+        );
+        if (!nextTile || tiles.includes(nextTile)) continue;
+        const elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+        let modifier = 0;
+        if (nextTile.userData.rock) modifier += 0.8;
+        let rangeDelta = Math.max(1, elevationChange + modifier);
+        const newRemainingRange = remainingRange - rangeDelta;
+        console.log(newRemainingRange);
+        if (newRemainingRange >= 0) {
+          tiles.push(nextTile);
+          tileQueue.push([nextTile, newRemainingRange]);
+        }
       }
     }
     return tiles;
   }
 
-  walkItOut(startingTile, range, priorDirection) {
+  async walkItOut(startingTile, range, priorDirection) {
     const tiles = [];
-    for (let direction = 0; direction < 4; direction++) {
-      if (direction === priorDirection) continue;
-      let remainingRange = range;
-      let currentTile = startingTile;
-      const nextTilePosition = { ...currentTile.position };
-      if (direction === 0) nextTilePosition.z += 1;
-      else if (direction === 1) nextTilePosition.x += 1;
-      else if (direction === 2) nextTilePosition.z -= 1;
-      else if (direction === 3) nextTilePosition.x -= 1;
-      const nextTile = this.map.children.find(tile =>
-        positionEquals(tile.position, nextTilePosition),
-      );
-      if (!nextTile) continue;
-      const tileParticipant = this.participants.find(participant => nextTile === participant.tile);
-      if (!nextTile.userData.tree && !tileParticipant) tiles.push(nextTile);
-      let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
-      if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.3);
-      let modifier = 0;
-      if (nextTile.userData.tree) modifier += 0.4;
-      if (nextTile.userData.rock) modifier += 0.8;
-      if (nextTile.userData.texture === 'road') modifier -= 0.2;
-      if (nextTile.userData.texture === 'smallRoad') modifier -= 0.1;
-      if (nextTile.userData.texture === 'snow') modifier += 0.4;
-      let rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
-      remainingRange -= rangeDelta;
-      currentTile = nextTile;
-      if (remainingRange > 0) {
-        tiles.push(...this.walkItOut(currentTile, remainingRange, (direction + 2) % 4));
+    const tileQueue = [[startingTile, range]];
+    while (tileQueue.length) {
+      const [currentTile, remainingRange] = tileQueue.shift();
+      for (let direction = 0; direction < 4; direction++) {
+        if (direction === priorDirection) continue;
+        const nextTilePosition = { ...currentTile.position };
+        if (direction === 0) nextTilePosition.z += 1;
+        else if (direction === 1) nextTilePosition.x += 1;
+        else if (direction === 2) nextTilePosition.z -= 1;
+        else if (direction === 3) nextTilePosition.x -= 1;
+        const nextTile = this.map.children.find(tile =>
+          positionEquals(tile.position, nextTilePosition),
+        );
+        if (!nextTile || tiles.includes(nextTile)) continue;
+        const tileParticipant = this.participants.find(
+          participant => nextTile === participant.tile,
+        );
+        if (!nextTile.userData.tree && !tileParticipant) tiles.push(nextTile);
+        let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+        if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.3);
+        let modifier = 0;
+        if (nextTile.userData.tree) modifier += 0.4;
+        if (nextTile.userData.rock) modifier += 0.8;
+        if (nextTile.userData.texture === 'road') modifier -= 0.2;
+        if (nextTile.userData.texture === 'smallRoad') modifier -= 0.1;
+        if (nextTile.userData.texture === 'snow') modifier += 0.4;
+        const rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
+        const newRemainingRange = remainingRange - rangeDelta;
+        if (newRemainingRange > 0) tileQueue.push([nextTile, newRemainingRange]);
       }
     }
     return tiles;
@@ -548,6 +556,9 @@ class GameMap {
     if (sameTeam(victim, this.currentParticipant)) console.log('same team');
     const damage = rollDice(...this.currentParticipant.damage);
     this.currentParticipant.degradeWeapon(damage);
+    this.currentParticipant.progressSkill(
+      this.currentParticipant.equipment.get('primary hand')?.subType || 'unarmed',
+    );
     victim.distributeDamage(damage);
     if (victim.hp <= 0) victim.die();
     const vector = new Vector3().subVectors(
@@ -578,7 +589,7 @@ class GameMap {
   endTurn() {
     this.clearInteractible();
     this.currentParticipant.nextMove =
-      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.get('speed').value);
+      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.get('speed').level);
     this.participants.sort(turnSort);
     this.currentParticipant = this.participants[0];
     this.currentTime = this.currentParticipant.nextMove;

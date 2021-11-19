@@ -6,11 +6,14 @@ export class Inventory {
   #readyTimeout = null;
   #ready = false;
   #saveTimeout = null;
+  #dungocoin = 0;
 
   constructor(id = 'player') {
     this.id = id;
-    get(`inventory/${id}`).then(async items => {
-      if (items) this.#items = await Promise.all(items.map(item => this.#build(item)));
+    get(`inventory/${id}`).then(async storage => {
+      if (storage.items)
+        this.#items = await Promise.all(storage.items.map(item => this.#build(item)));
+      if (storage.dungocoin) this.#dungocoin = storage.dungocoin;
       await Promise.all(this.#items.map(item => item.initialized));
       this.#ready = true;
     });
@@ -19,7 +22,7 @@ export class Inventory {
   #saveInventory() {
     clearTimeout(this.#saveTimeout);
     this.#saveTimeout = setTimeout(() => {
-      set(`inventory/${this.id}`, this.itemsForStorage);
+      set(`inventory/${this.id}`, this.storage);
     }, 100);
   }
 
@@ -52,9 +55,14 @@ export class Inventory {
       });
     });
   }
-
-  get itemsForStorage() {
-    return this.#items.map(item => ({ id: item.id, itemType: item.itemType }));
+  get dungocoin() {
+    return this.#dungocoin;
+  }
+  get storage() {
+    return {
+      items: this.#items.map(item => ({ id: item.id, itemType: item.itemType })),
+      dungocoin: this.#dungocoin,
+    };
   }
   get items() {
     return this.#items;
@@ -63,6 +71,17 @@ export class Inventory {
     this.#items = items;
   }
   // #endregion
+  addDungocoin(amount) {
+    this.#dungocoin += amount;
+    this.#saveInventory();
+  }
+
+  spendDungocoin(amount) {
+    if (this.#dungocoin < amount) throw new Error('Not enough dungocoin');
+    this.#dungocoin -= amount;
+    this.#saveInventory();
+    return this.#dungocoin;
+  }
 
   add(item) {
     this.#items = [...this.#items, item instanceof Item ? item : this.#build(item)];

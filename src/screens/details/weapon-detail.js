@@ -21,7 +21,7 @@ class WeaponDetail extends LitElement {
 
   render() {
     return html`
-      <header>${this.item.name}</header>
+      <header>${statTemplate(this.item.name, this.item.subType)}</header>
       ${durabilityTemplate(this.item)} ${statTemplate('Hands', this.item.hands)}
       ${statTemplate('Range', this.item.range)}
       ${statTemplate('Damage', dieDisplay(this.item.strength, this.item.power))}

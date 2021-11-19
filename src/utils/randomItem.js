@@ -13,6 +13,7 @@ const shortbowNames = ['bow', 'shortbow', 'hornbow', 'saddlebow'];
 const longbowNames = ['longbow', 'compositebow'];
 const crossbowNames = ['crossbow', 'arbalest'];
 const shieldNames = ['shield', 'buckler', 'kite', 'tower', 'pavise', 'scutum'];
+const staffNames = ['staff', 'quarterstaff'];
 const randomItems = [
   randomBody,
   randomBoots,
@@ -71,6 +72,15 @@ export async function randomHead(level) {
   const power = rollStat({ level });
   const strength = rollStat({ level });
   const item = new Head({ power, strength, name: oneOf(headNames) });
+  return item;
+}
+export async function randomShield(level) {
+  const { Shield } = await import('../items/Shield.js');
+  // let effects = [];
+  // while(rollDice(20) >= 21-level)
+  const power = rollStat({ level });
+  const strength = rollStat({ level });
+  const item = new Shield({ power, strength, name: oneOf(shieldNames) });
   return item;
 }
 async function randomWeapon({ level, hands, powerModifier, range, name, subType, category }) {
@@ -159,6 +169,17 @@ export async function randomCrossbow(level) {
     name: oneOf(crossbowNames),
     category: 'ranged',
     subType: 'crossbow',
+  });
+}
+export async function randomStaff(level) {
+  return await randomWeapon({
+    level,
+    hands: 2,
+    powerModifier: 1.5,
+    range: 1,
+    name: oneOf(staffNames),
+    category: 'melee',
+    subType: 'staff',
   });
 }
 export async function randomItem(level) {

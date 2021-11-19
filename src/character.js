@@ -33,6 +33,9 @@ import { Hands } from './items/Hands.js';
 import { Head } from './items/Head.js';
 import { Boots } from './items/Boots.js';
 
+import { skillModifier } from './utils/skillModifier.js';
+import { statModifier } from './utils/statModifier.js';
+
 const idbStore = createStore('characters', 'characterStore');
 
 function rebuild(key, value) {
@@ -69,12 +72,12 @@ export class Character {
     name = '',
     color = { name: 'red', hex: '#ff0000' },
     stats = new Map([
-      ['strength', { value: 1, progression: 1 }],
-      ['dexterity', { value: 1, progression: 1 }],
-      ['constitution', { value: 1, progression: 1 }],
-      ['speed', { value: 1, progression: 1 }],
-      ['intellect', { value: 1, progression: 1 }],
-      ['magic', { value: 1, progression: 1 }],
+      ['strength', { level: 1, progression: 1 }],
+      ['dexterity', { level: 1, progression: 1 }],
+      ['constitution', { level: 1, progression: 1 }],
+      ['speed', { level: 1, progression: 1 }],
+      ['intellect', { level: 1, progression: 1 }],
+      ['magic', { level: 1, progression: 1 }],
     ]),
     skills = new Map(),
     position = false,
@@ -167,9 +170,8 @@ export class Character {
     clearTimeout(this.#saveTimeout);
     this.#saveTimeout = setTimeout(() => {
       if (this.destroyed) return;
-      console.log('setting', this.id, this.name);
       set(this.id, this.serialized, idbStore);
-    }, 100);
+    }, 50);
   }
 
   //#region getters/setters
@@ -236,7 +238,6 @@ export class Character {
     this.#direction = direction;
     this.#saveCharacter();
   }
-  //#endregion
   get initialized() {
     return new Promise(resolve => {
       setInterval(() => {
@@ -271,10 +272,24 @@ export class Character {
     return this.equipment.get('primary hand')?.range || 1;
   }
 
+  get primaryAttack() {
+    return this.equipment.get('primary hand')?.category || 'melee';
+  }
+
   get damage() {
+    const primary = this.equipment.get('primary hand') ?? {
+      subType: 'unarmed',
+      skill: 'unarmed',
+      hands: 1,
+      range: 1,
+      category: 'melee',
+      strength: Math.round(this.stats.get('strength').level / 2),
+      power: Math.round(this.stats.get('dexterity').level / 2),
+    };
+    const skill = this.skills.get(primary.skill)?.level || 0;
     return [
-      (this.equipment.get('primary hand')?.strength || 0) + this.stats.get('strength').value,
-      (this.equipment.get('primary hand')?.power || 0) + this.stats.get('dexterity').value,
+      Math.max(1, Math.round(primary.strength * statModifier(this.stats.get('strength').level))),
+      Math.max(1, Math.round(primary.power * skillModifier(skill))),
     ];
   }
 
@@ -287,14 +302,17 @@ export class Character {
   }
 
   get move() {
-    return 2 + 0.1 * this.stats.get('dexterity').value + (this.modifiers.move ?? 0);
+    return Math.max(
+      2,
+      2 * statModifier(this.stats.get('dexterity').level) + (this.modifiers.get('move') ?? 0),
+    );
   }
 
   /** @type {Number} */
   get maxhp() {
     return (
-      this.stats.get('constitution').value * 10 +
-      this.stats.get('strength').value * 5 +
+      this.stats.get('constitution').level * 10 +
+      this.stats.get('strength').level * 5 +
       (this.modifiers.hp ?? 0)
     );
   }
@@ -302,8 +320,8 @@ export class Character {
   /** @type {Number} */
   get maxmana() {
     return (
-      this.stats.get('intellect').value * 10 +
-      this.stats.get('magic').value * 5 +
+      this.stats.get('intellect').level * 10 +
+      this.stats.get('magic').level * 5 +
       (this.modifiers.mana ?? 0)
     );
   }
@@ -364,6 +382,7 @@ export class Character {
       2
     );
   }
+  //#endregion
 
   setup() {
     /** @type {Number} */
@@ -375,6 +394,33 @@ export class Character {
   async die() {
     const { deathAnimation } = await import('./animations/character-death.js');
     deathAnimation.call(this);
+  }
+
+  progressSkill(skillUsed) {
+    let characterSkill = this.skills.get(skillUsed);
+    if (!characterSkill)
+      characterSkill = {
+        level: 1,
+        progression: 0,
+      };
+    else characterSkill.progression += Math.max(50 - characterSkill.level * 2, 1);
+    if (characterSkill.progression >= 100) {
+      characterSkill.progression = 0;
+      characterSkill.level++;
+    }
+    this.skills.set(skillUsed, characterSkill);
+    this.#saveCharacter();
+  }
+
+  progressStat(statUsed) {
+    let characterStat = this.stats.get(statUsed);
+    characterStat.progression += Math.max(10 - characterStat.level, 1);
+    if (characterStat.progression >= 100) {
+      characterStat.progression = 0;
+      characterStat.level++;
+    }
+    this.stats.set(statUsed, characterStat);
+    this.#saveCharacter();
   }
 
   equip(category, item) {

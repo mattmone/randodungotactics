@@ -12,6 +12,10 @@ export class Weapon extends Item {
   get type() {
     return 'weapon';
   }
+
+  get skill() {
+    return this.subType;
+  }
 }
 
 /**

@@ -136,11 +136,20 @@
       text-transform: uppercase;
       aspect-ratio: 2 / 1;
     }
+    button[disabled] {
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
     
     #crewButton, #shopButton {
       aspect-ratio: 1 / 1;
       display: grid;
       place-items: center;
+    }
+    #crewCount {
+      font-size: 0.7em;
+      top: 0.25em;
+      position: relative;
     }
     [hidden] {
       display:none !important;
@@ -166,10 +175,11 @@
 <body>
   <div id='opening_screen'>
     <h1 id='heading'>Rando<span class='accent-text'>Dungo</span><span id='tactics'>Tactics</span></h1>
-    <button id='crewButton'>crew</button>
-    <button id='shopButton'>shop</button>
-    <button id='jobButton'>take a job</button>
+    <button id='crewButton'><span>crew<span id='crewCount'></span></span></button>
+    <button id='shopButton' disabled>shop</button>
+    <button id='jobButton' disabled>take a job</button>
     <side-screen id='crew-screen'>
+      <h1 hidden data-show-on-open id='crew-header' slot="header">Crew</h1>
       <crew-content></crew-content>
     </side-screen>
     <side-screen id='shop-screen'>

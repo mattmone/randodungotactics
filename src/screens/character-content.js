@@ -144,15 +144,6 @@ class CharacterContent extends LitElement {
   constructor() {
     super();
     this.category = 'stats';
-    this.skills = {
-      'one-handed': { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      'two-handed': { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      block: { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      sneak: { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      ranged: { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      unarmed: { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-      'dual-wielding': { level: Math.floor(Math.random() * 40), progress: Math.random() * 100 },
-    };
     this.equipmentSlots = [
       'primary hand',
       'secondary hand',
@@ -243,13 +234,13 @@ class CharacterContent extends LitElement {
       </div>
       <div id="selection">
         <stats-content ?hidden=${this.category !== 'stats'}>
-          ${Array.from(this.character.stats.entries()).map(([stat, { value, progression }]) =>
-            statBoxTemplate(stat, value, progression),
+          ${Array.from(this.character.stats.entries()).map(([stat, { level, progression }]) =>
+            statBoxTemplate(stat, level, progression),
           )}]))}
         </stats-content>
         <skills-content ?hidden=${this.category !== 'skills'}>
-          ${Array.from(this.character.skills.entries).map(([skill, { level, progress }]) =>
-            statBoxTemplate(skill, level, progress),
+          ${Array.from(this.character.skills.entries()).map(([skill, { level, progression }]) =>
+            statBoxTemplate(skill, level, progression),
           )}
         </skills-content>
         <equipment-content

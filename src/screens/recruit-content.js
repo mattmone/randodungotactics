@@ -51,14 +51,16 @@ class RecruitContent extends LitElement {
   constructor() {
     super();
     this.recruits = new Crew('recruits');
-    this.recruits.ready.then(() => {
+    this.recruits.ready.then(async () => {
       this.recruits.members.forEach(recruit => {
         if (new Date() - recruit.created > 1000) this.recruits.remove(recruit);
       });
-      while (this.recruits.members.length < 5) this.recruits.random();
-      Promise.all(this.recruits.members.map(recruit => recruit.avatar.ready)).then(() => {
-        this.requestUpdate();
-      });
+      const newRecruits = [];
+      while (this.recruits.members.length + newRecruits.length < 5)
+        newRecruits.push(this.recruits.random());
+      await Promise.all(newRecruits);
+      await Promise.all(this.recruits.members.map(recruit => recruit.avatar.ready));
+      this.requestUpdate();
     });
   }
 

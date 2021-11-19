@@ -3,109 +3,6 @@ import { oneOf } from '../utils/oneOf.js';
 import { get, set, del } from '../../libs/idb-keyval.js';
 import { rollDice } from '../utils/rollDice.js';
 
-const names = [
-  'Liam',
-  'Olivia',
-  'Noah',
-  'Emma',
-  'Oliver',
-  'Ava',
-  'Elijah',
-  'Charlotte',
-  'William',
-  'Sophia',
-  'James',
-  'Amelia',
-  'Benjamin',
-  'Isabella',
-  'Lucas',
-  'Mia',
-  'Henry',
-  'Evelyn',
-  'Alexander',
-  'Harper',
-  'Mason',
-  'Camila',
-  'Michael',
-  'Gianna',
-  'Ethan',
-  'Abigail',
-  'Daniel',
-  'Luna',
-  'Jacob',
-  'Ella',
-  'Logan',
-  'Elizabeth',
-  'Jackson',
-  'Sofia',
-  'Levi',
-  'Emily',
-  'Sebastian',
-  'Avery',
-  'Mateo',
-  'Mila',
-  'Jack',
-  'Scarlett',
-  'Owen',
-  'Eleanor',
-  'Theodore',
-  'Madison',
-  'Aiden',
-  'Layla',
-  'Samuel',
-  'Penelope',
-  'Joseph',
-  'Aria',
-  'John',
-  'Chloe',
-  'David',
-  'Grace',
-  'Wyatt',
-  'Ellie',
-  'Matthew',
-  'Nora',
-  'Luke',
-  'Hazel',
-  'Asher',
-  'Zoey',
-  'Carter',
-  'Riley',
-  'Julian',
-  'Victoria',
-  'Grayson',
-  'Lily',
-  'Leo',
-  'Aurora',
-  'Jayden',
-  'Violet',
-  'Gabriel',
-  'Nova',
-  'Isaac',
-  'Hannah',
-  'Lincoln',
-  'Emilia',
-  'Anthony',
-  'Zoe',
-  'Hudson',
-  'Stella',
-  'Dylan',
-  'Everly',
-  'Ezra',
-  'Isla',
-  'Thomas',
-  'Leah',
-  'Charles',
-  'Lillian',
-  'Christopher',
-  'Addison',
-  'Jaxon',
-  'Willow',
-  'Maverick',
-  'Lucy',
-  'Josiah',
-  'Paisley',
-];
-
 const colors = [
   { name: 'White', hex: 0xffffff },
   { name: 'Red', hex: 0xff0000 },
@@ -255,7 +152,6 @@ export class Crew {
     this.id = id;
     get(`crew/${id}`).then(async crew => {
       if (crew) this.#members = crew.map(member => new Character({ id: member }));
-      else this.random({});
       await Promise.all(this.#members.map(member => member.initialized));
       this.#ready = true;
     });
@@ -297,7 +193,6 @@ export class Crew {
 
   remove(removedMember, nonDestructive) {
     this.#members = this.members.filter(member => member !== removedMember);
-    console.log('destroying member', removedMember.name);
     if (!nonDestructive) removedMember.destroy();
     this.#saveCrew();
   }
@@ -308,51 +203,114 @@ export class Crew {
     this.#saveCrew();
   }
 
-  random({ quantity, level } = { quantity: 1, level: 1 }) {
+  async random(
+    { quantity, level, withEquipment } = { quantity: 1, level: 1, withEquipment: false },
+  ) {
+    const distributePoints = (points, possibilities, max = 10, favored) => {
+      while (points > 0) {
+        const choices = Array.from(points % 2 === 0 && favored ? favored : possibilities.keys());
+        const chosen = oneOf(choices);
+        const currentLevel = possibilities.get(chosen).level;
+        if (currentLevel <= max) {
+          possibilities.set(chosen, {
+            ...possibilities.get(chosen),
+            level: currentLevel + 1,
+          });
+          points--;
+        }
+      }
+    };
     for (let i = 0; i < quantity; i++) {
       const characterOptions = {};
+      const { names } = await import('../constants/names.js');
       characterOptions.name = oneOf(names);
       characterOptions.color = oneOf(colors);
       characterOptions.stats = new Map([
-        ['strength', { value: 1, progression: rollDice(99) }],
+        ['strength', { level: 1, progression: 0 }],
         [
           'constitution',
           {
-            value: 1,
-            progression: rollDice(99),
+            level: 1,
+            progression: 0,
           },
         ],
         [
           'dexterity',
           {
-            value: 1,
-            progression: rollDice(99),
+            level: 1,
+            progression: 0,
           },
         ],
-        ['speed', { value: 1, progression: rollDice(99) }],
+        ['speed', { level: 1, progression: 0 }],
         [
           'intellect',
           {
-            value: 1,
-            progression: rollDice(99),
+            level: 1,
+            progression: 0,
           },
         ],
-        ['magic', { value: 1, progression: rollDice(99) }],
+        ['magic', { level: 1, progression: 0 }],
       ]);
-      let points = 4 * 6 * level;
-      const stats = Array.from(characterOptions.stats.keys());
-      while (points > 0) {
-        const stat = oneOf(stats);
-        const statValue = characterOptions.stats.get(stat).value;
-        if (statValue <= level * 10) {
-          characterOptions.stats.set(stat, {
-            ...characterOptions.stats.get(stat),
-            value: statValue + 1,
-          });
-          points--;
-        }
+      const focus = oneOf(['stealth', 'magic', 'melee', 'ranged']);
+      const favoredStats = [];
+      if (focus === 'stealth') {
+        favoredStats.push('speed', 'dexterity', 'intellect');
+      } else if (focus === 'magic') {
+        favoredStats.push('magic', 'intellect', 'dexterity');
+      } else if (focus === 'melee') {
+        favoredStats.push('strength', 'constitution', 'dexterity');
+      } else if (focus === 'ranged') {
+        favoredStats.push('dexterity', 'speed', 'strength');
       }
+      const skills = [];
+      if (focus === 'stealth') {
+        skills.push(
+          ['athletics', { level: 0, progression: 0 }],
+          ['acrobatics', { level: 0, progression: 0 }],
+          ['flanking', { level: 0, progression: 0 }],
+          ['defend', { level: 0, progression: 0 }],
+          [oneOf(['sword', 'knife', 'crossbow']), { level: 0, progression: 0 }],
+        );
+      } else if (focus === 'magic') {
+        skills.push(
+          ['arcana: destruction', { level: 0, progression: 0 }],
+          ['arcana: healing', { level: 0, progression: 0 }],
+          ['arcana: support', { level: 0, progression: 0 }],
+          ['defend', { level: 0, progression: 0 }],
+          ['staff', { level: 0, progression: 0 }],
+        );
+      } else if (focus === 'melee') {
+        const weapons = ['sword', 'axe', 'knife', 'polearm', 'unarmed'];
+        const weapon1 = oneOf(weapons);
+        const weapon2 = oneOf(weapons.filter(weapon => weapon !== weapon1));
+        skills.push(
+          ['athletics', { level: 0, progression: 0 }],
+          ['acrobatics', { level: 0, progression: 0 }],
+          ['defend', { level: 0, progression: 0 }],
+          [weapon1, { level: 0, progression: 0 }],
+          [weapon2, { level: 0, progression: 0 }],
+        );
+      } else if (focus === 'ranged') {
+        const weapons = ['shortbow', 'longbow', 'crossbow'];
+        const weapon1 = oneOf(weapons);
+        skills.push(
+          ['athletics', { level: 0, progression: 0 }],
+          ['acrobatics', { level: 0, progression: 0 }],
+          ['flanking', { level: 0, progression: 0 }],
+          ['defend', { level: 0, progression: 0 }],
+          [weapon1, { level: 0, progression: 0 }],
+        );
+      }
+
+      characterOptions.skills = new Map(skills);
+      let statPoints = 4 * 6 * level;
+      let skillPoints = 4 * 6 * level;
+      distributePoints(statPoints, characterOptions.stats, level * 10, favoredStats);
+      distributePoints(skillPoints, characterOptions.skills, level * 10);
+
       const character = this.add(characterOptions);
+
+      if (!withEquipment) return character;
       import('../utils/randomItem.js').then(
         async ({
           randomHead,
@@ -365,27 +323,26 @@ export class Crew {
           randomShortbow,
           randomLongbow,
           randomCrossbow,
+          randomStaff,
           randomHands,
         }) => {
-          character.equip(
-            'primary hand',
-            await oneOf([
-              randomSword,
-              randomAxe,
-              randomPolearm,
-              randomKnife,
-              randomShortbow,
-              randomLongbow,
-              randomCrossbow,
-            ])(),
-          );
+          const possibilities = [];
+          if (character.skills.has('sword')) possibilities.push(randomSword);
+          if (character.skills.has('axe')) possibilities.push(randomAxe);
+          if (character.skills.has('polearm')) possibilities.push(randomPolearm);
+          if (character.skills.has('knife')) possibilities.push(randomKnife);
+          if (character.skills.has('shortbow')) possibilities.push(randomShortbow);
+          if (character.skills.has('longbow')) possibilities.push(randomLongbow);
+          if (character.skills.has('crossbow')) possibilities.push(randomCrossbow);
+          if (character.skills.has('staff')) possibilities.push(randomStaff);
+          if (possibilities.length) character.equip('primary hand', await oneOf(possibilities)());
           if (rollDice(6) >= 3) character.equip('body', await randomBody());
           if (rollDice(6) >= 4) character.equip('head', await randomHead());
           if (rollDice(6) >= 5) character.equip('boots', await randomBoots());
           if (rollDice(6) >= 6) character.equip('hands', await randomHands());
-          console.log(character);
         },
       );
+      return character;
     }
   }
 }
