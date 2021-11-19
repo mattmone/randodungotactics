@@ -47,6 +47,7 @@ const terrain = {
   entry: { baseColor: 'rgb(100,100,100)', borderColor: ['rgb(20,20,20)'] },
   highlight: { baseColor: 'rgb(200,200,100)', borderColor: ['rgb(20,20,20)'] },
   interactable: { baseColor: 'rgb(255,255,255)', borderColor: ['rgb(20,20,20)'] },
+  'inverted-interactable': { baseColor: 'rgb(170,170,70)', borderColor: ['rgb(170,170,170)'] },
 };
 
 const createdCanvii = {};

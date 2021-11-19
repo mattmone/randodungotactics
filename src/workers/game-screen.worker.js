@@ -513,7 +513,11 @@ class GameMap {
     this.interactible = await this.#determineInteractible[action](range);
     this.interactible.forEach(tile => {
       const material = new MeshBasicMaterial({
-        map: new CanvasTexture(createTerrainSide('interactable')),
+        map: new CanvasTexture(
+          createTerrainSide(
+            tile.userData.texture === 'snow' ? 'inverted-interactable' : 'interactable',
+          ),
+        ),
       });
       material.opacity = 0.6;
       material.transparent = true;
