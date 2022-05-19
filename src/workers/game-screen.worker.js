@@ -1,4 +1,4 @@
-import { expose } from '../../libs/comlink.min.js';
+import { expose } from "../../libs/comlink.min.js";
 import {
   Scene,
   OrthographicCamera,
@@ -19,18 +19,18 @@ import {
   AnimationClip,
   Clock,
   Object3D,
-} from '../../libs/three.module.js';
+} from "../../libs/three.module.js";
 
-import { makeMap } from '../utils/makeMap.js';
-import { createTerrainSide } from '../utils/createTerrainSide.js';
-import { rollDice } from '../utils/rollDice.js';
-import { oneOf } from '../utils/oneOf.js';
-import { Character } from '../character.js';
-import { Crew } from '../services/crew.js';
+import { makeMap } from "../utils/makeMap.js";
+import { createTerrainSide } from "../utils/createTerrainSide.js";
+import { rollDice } from "../utils/rollDice.js";
+import { oneOf } from "../utils/oneOf.js";
+import { Character } from "../character.js";
+import { Crew } from "../services/crew.js";
 
 const characters = new Crew();
 
-const enemies = new Crew('enemy');
+const enemies = new Crew("enemy");
 if (enemies.members.length > 0) enemies.disband();
 enemies.random({ quantity: 5, level: 2, withEquipment: true });
 const positionEquals = (position1, position2) => {
@@ -39,19 +39,34 @@ const positionEquals = (position1, position2) => {
 
 const sameTeam = (char1, char2) => {
   return (
-    (characters.members.includes(char1) && characters.members.includes(char2)) ||
+    (characters.members.includes(char1) &&
+      characters.members.includes(char2)) ||
     (enemies.members.includes(char1) && enemies.members.includes(char2))
   );
 };
 
 function turnSort(participant1, participant2) {
   let sort = 0;
-  if (participant1.stats.get('dexterity').level < participant2.stats.get('dexterity').level)
+  if (
+    participant1.stats.get("dexterity").level <
+    participant2.stats.get("dexterity").level
+  )
     sort = 1;
-  if (participant1.stats.get('dexterity').level > participant2.stats.get('dexterity').level)
+  if (
+    participant1.stats.get("dexterity").level >
+    participant2.stats.get("dexterity").level
+  )
     sort = -1;
-  if (participant1.stats.get('speed').level < participant2.stats.get('speed').level) sort = 1;
-  if (participant1.stats.get('speed').level > participant2.stats.get('speed').level) sort = -1;
+  if (
+    participant1.stats.get("speed").level <
+    participant2.stats.get("speed").level
+  )
+    sort = 1;
+  if (
+    participant1.stats.get("speed").level >
+    participant2.stats.get("speed").level
+  )
+    sort = -1;
   if (participant1.nextMove > participant2.nextMove) sort = 1;
   if (participant1.nextMove < participant2.nextMove) sort = -1;
   return sort;
@@ -97,7 +112,14 @@ class GameMap {
      */
     this.aspect = canvas.width / canvas.height;
     const d = 70;
-    this.camera = new OrthographicCamera(-d * this.aspect, d * this.aspect, d, -d, 1, 1000);
+    this.camera = new OrthographicCamera(
+      -d * this.aspect,
+      d * this.aspect,
+      d,
+      -d,
+      1,
+      1000
+    );
 
     this.ambientLight = new AmbientLight(0xffffff, 0.8);
 
@@ -145,7 +167,7 @@ class GameMap {
     }));
   }
 
-  generateMap({ type = 'largeRoad', width = 24, height = 12 }) {
+  generateMap({ type = "largeRoad", width = 24, height = 12 }) {
     const map = makeMap({ type, width, height });
     this.maps.push(map);
     const mapName = `map-${Math.floor(Math.random() * 100000)}`;
@@ -165,25 +187,31 @@ class GameMap {
           xPosition += 1;
           continue;
         }
-        const textureCanvas = createTerrainSide(characterPlacement ? 'entry' : pixel.texture);
+        const textureCanvas = createTerrainSide(
+          characterPlacement ? "entry" : pixel.texture
+        );
         const texture = new CanvasTexture(textureCanvas);
 
         const boxMaterial = new (
-          pixel.texture === 'water' ? MeshBasicMaterial : MeshStandardMaterial
+          pixel.texture === "water" ? MeshBasicMaterial : MeshStandardMaterial
         )({
           map: texture,
         });
-        const cubeHeight = pixel.texture === 'water' ? pixel.elevation : pixel.elevation + 0.5;
+        const cubeHeight =
+          pixel.texture === "water" ? pixel.elevation : pixel.elevation + 0.5;
         const cube = new Mesh(new BoxGeometry(1, cubeHeight, 1), boxMaterial);
         cube.position.set(
           xPosition,
-          0.5 * (pixel.texture === 'water' ? pixel.elevation - 0.5 : pixel.elevation),
-          zPosition,
+          0.5 *
+            (pixel.texture === "water"
+              ? pixel.elevation - 0.5
+              : pixel.elevation),
+          zPosition
         );
         cube.userData = { ...pixel };
         const tileExtras = this.renderTileExtras({ ...pixel, cubeHeight });
         if (tileExtras.length) cube.add(...tileExtras);
-        if (characterPlacement) cube.userData.type = 'placement';
+        if (characterPlacement) cube.userData.type = "placement";
         group.add(cube);
         xPosition += 1;
       }
@@ -199,12 +227,16 @@ class GameMap {
     const meshes = [];
     if (tree) {
       let layers = rollDice(4);
-      const textureCanvas = createTerrainSide('stump');
+      const textureCanvas = createTerrainSide("stump");
       const texture = new CanvasTexture(textureCanvas);
       const stumpGeometry = new BoxGeometry(0.5, 1, 0.5);
       const stumpMaterial = new MeshStandardMaterial({ map: texture });
       const tree = new Mesh(stumpGeometry, stumpMaterial);
-      tree.position.set(0, cubeHeight / 2 + stumpGeometry.parameters.height / 2, 0);
+      tree.position.set(
+        0,
+        cubeHeight / 2 + stumpGeometry.parameters.height / 2,
+        0
+      );
       layers--;
       if (layers) {
         const treeLayers = layers * 2;
@@ -212,21 +244,24 @@ class GameMap {
           const size = cubeIndex / (treeLayers + 1) + 0.5;
           const treeGeometry = new BoxGeometry(size, 0.5, size);
           const textureCanvas =
-            texture === 'snow'
-              ? createTerrainSide('tree', { positiveZ: 'snow' })
-              : createTerrainSide('tree');
+            texture === "snow"
+              ? createTerrainSide("tree", { positiveZ: "snow" })
+              : createTerrainSide("tree");
           let cubeImages = Array(6).fill(new CanvasTexture(textureCanvas));
           if (textureCanvas.positiveX)
-            cubeImages = Object.values(textureCanvas).map(canvas => new CanvasTexture(canvas));
+            cubeImages = Object.values(textureCanvas).map(
+              (canvas) => new CanvasTexture(canvas)
+            );
           const treeMaterial = cubeImages.map(
-            canvasTexture => new MeshStandardMaterial({ map: canvasTexture }),
+            (canvasTexture) => new MeshStandardMaterial({ map: canvasTexture })
           );
           const leaves = new Mesh(treeGeometry, treeMaterial);
           leaves.position.set(
             0,
             stumpGeometry.parameters.height / 2 +
-              ((treeLayers - cubeIndex) * treeGeometry.parameters.height) / (!cubeIndex ? 2 : 1),
-            0,
+              ((treeLayers - cubeIndex) * treeGeometry.parameters.height) /
+                (!cubeIndex ? 2 : 1),
+            0
           );
           tree.add(leaves);
         }
@@ -235,18 +270,24 @@ class GameMap {
     }
     if (rock) {
       const textureCanvas =
-        texture === 'snow'
-          ? createTerrainSide('rock', { positiveZ: 'snow' })
-          : createTerrainSide('rock');
+        texture === "snow"
+          ? createTerrainSide("rock", { positiveZ: "snow" })
+          : createTerrainSide("rock");
       let cubeImages = Array(6).fill(new CanvasTexture(textureCanvas));
       if (textureCanvas.positiveX)
-        cubeImages = Object.values(textureCanvas).map(canvas => new CanvasTexture(canvas));
+        cubeImages = Object.values(textureCanvas).map(
+          (canvas) => new CanvasTexture(canvas)
+        );
       const rockMaterial = cubeImages.map(
-        canvasTexture => new MeshStandardMaterial({ map: canvasTexture }),
+        (canvasTexture) => new MeshStandardMaterial({ map: canvasTexture })
       );
       const rockGeometry = new BoxGeometry(0.9, 1, 0.9);
       const rockCube = new Mesh(rockGeometry, rockMaterial);
-      rockCube.position.set(0, cubeHeight / 2 + rockGeometry.parameters.height / 2, 0);
+      rockCube.position.set(
+        0,
+        cubeHeight / 2 + rockGeometry.parameters.height / 2,
+        0
+      );
       meshes.push(rockCube);
     }
     return meshes;
@@ -269,14 +310,14 @@ class GameMap {
     let endPhase = false,
       damage,
       position;
-    if (this.phase === 'move') endPhase = await this.move(clickPosition);
-    if (this.phase === 'action' && this.action === 'attack')
+    if (this.phase === "move") endPhase = await this.move(clickPosition);
+    if (this.phase === "action" && this.action === "attack")
       [endPhase, damage, position] = await this.attack(clickPosition);
     return { clickPosition, childCount, endPhase, damage, position };
   }
 
   async mapAvailable(index, entry) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const interval = setInterval(() => {
         if ((entry ? this.entryMaps : this.renderedMaps)[index]) resolve();
       }, 16);
@@ -284,33 +325,43 @@ class GameMap {
   }
 
   async mapSelection() {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       resolve();
     });
   }
 
   async entryMap(index, mapType) {
-    this.phase = 'placement';
+    this.phase = "placement";
     await this.mapAvailable(index, true);
     this.map = this.entryMaps.splice(index, 1)[0];
-    const maximalChildren = this.map.children.reduce((accumulatedChild, child) => ({
-      minX: Math.min(
-        !isNaN(accumulatedChild.minX) ? accumulatedChild.minX : accumulatedChild.position.x,
-        child.position.x,
-      ),
-      minZ: Math.min(
-        !isNaN(accumulatedChild.minZ) ? accumulatedChild.minZ : accumulatedChild.position.z,
-        child.position.z,
-      ),
-      maxX: Math.max(
-        !isNaN(accumulatedChild.maxX) ? accumulatedChild.maxX : accumulatedChild.position.x,
-        child.position.x,
-      ),
-      maxZ: Math.max(
-        !isNaN(accumulatedChild.maxZ) ? accumulatedChild.maxZ : accumulatedChild.position.z,
-        child.position.z,
-      ),
-    }));
+    const maximalChildren = this.map.children.reduce(
+      (accumulatedChild, child) => ({
+        minX: Math.min(
+          !isNaN(accumulatedChild.minX)
+            ? accumulatedChild.minX
+            : accumulatedChild.position.x,
+          child.position.x
+        ),
+        minZ: Math.min(
+          !isNaN(accumulatedChild.minZ)
+            ? accumulatedChild.minZ
+            : accumulatedChild.position.z,
+          child.position.z
+        ),
+        maxX: Math.max(
+          !isNaN(accumulatedChild.maxX)
+            ? accumulatedChild.maxX
+            : accumulatedChild.position.x,
+          child.position.x
+        ),
+        maxZ: Math.max(
+          !isNaN(accumulatedChild.maxZ)
+            ? accumulatedChild.maxZ
+            : accumulatedChild.position.z,
+          child.position.z
+        ),
+      })
+    );
     const [midX, midZ] = [
       (Math.max(maximalChildren.maxX, maximalChildren.minX) +
         Math.min(maximalChildren.maxX, maximalChildren.minX)) /
@@ -321,7 +372,7 @@ class GameMap {
     ];
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
-    if (mapType === 'mountain') {
+    if (mapType === "mountain") {
       this.camera.zoom = 2;
       this.focalPoint.position.y = -3;
     }
@@ -334,21 +385,21 @@ class GameMap {
   }
 
   async loadMap(index, mapType) {
-    this.phase = 'firstTurn';
+    this.phase = "firstTurn";
     await this.mapAvailable(index);
     await this.focus({ x: 0, y: 0, z: 0 });
     this.map.removeFromParent();
     this.map = this.renderedMaps.splice(index, 1)[0];
 
-    const enemyTiles = this.map.children.filter(tile => tile.userData.enemy);
-    enemies.members.forEach(enemy => {
+    const enemyTiles = this.map.children.filter((tile) => tile.userData.enemy);
+    enemies.members.forEach((enemy) => {
       const placementTile = oneOf(enemyTiles);
       this.placeCharacter({ character: enemy }, placementTile, true);
     });
 
-    this.map.children.forEach(tile => {
-      const characterAtPosition = Array.from(this.placedCharacters).find(character =>
-        positionEquals(tile.position, character.position),
+    this.map.children.forEach((tile) => {
+      const characterAtPosition = Array.from(this.placedCharacters).find(
+        (character) => positionEquals(tile.position, character.position)
       );
       if (!characterAtPosition) return;
       this.placeCharacter({ character: characterAtPosition }, tile);
@@ -357,7 +408,7 @@ class GameMap {
     this.directionalLight.target = this.map;
     this.camera.zoom = 3;
     this.focalPoint.position.set(0, 0, 0);
-    if (this.mapType === 'mountain') {
+    if (this.mapType === "mountain") {
       this.camera.zoom = 2;
       this.focalPoint.y = -3;
     }
@@ -368,15 +419,18 @@ class GameMap {
   }
 
   async startBattle() {
-    this.participants = [...this.placedCharacters, ...enemies.members].sort(turnSort);
-    this.participants.forEach(character => {
+    this.participants = [...this.placedCharacters, ...enemies.members].sort(
+      turnSort
+    );
+    this.participants.forEach((character) => {
       character.hp = character.maxhp;
       character.mana = character.maxmana;
     });
     this.currentTime = 0;
     this.currentParticipant = this.participants[0];
     this.focus();
-    if (enemies.members.includes(this.currentParticipant)) return this.performTurn();
+    if (enemies.members.includes(this.currentParticipant))
+      return this.performTurn();
     return this.currentParticipant.passable;
   }
 
@@ -385,25 +439,25 @@ class GameMap {
   }
 
   initiateMove() {
-    this.phase = 'move';
+    this.phase = "move";
     this.markInteractibles(this.currentParticipant.move, this.phase);
   }
 
   initiateAttack() {
-    this.phase = 'action';
-    this.action = 'attack';
+    this.phase = "action";
+    this.action = "attack";
     this.markInteractibles(this.currentParticipant.attackRange, this.phase);
   }
 
   #determineInteractible = {
-    action: range => {
+    action: (range) => {
       const tiles =
-        this.currentParticipant.primaryAttack === 'melee'
+        this.currentParticipant.primaryAttack === "melee"
           ? this.hackItOut(this.currentParticipant.tile, range)
           : this.rangeItOut(this.currentParticipant.tile, range);
       return Array.from(new Set(tiles));
     },
-    move: async range => {
+    move: async (range) => {
       const tiles = await this.walkItOut(this.currentParticipant.tile, range);
       return Array.from(new Set(tiles));
     },
@@ -420,15 +474,17 @@ class GameMap {
         else if (direction === 1) nextTilePosition.x += 1;
         else if (direction === 2) nextTilePosition.z -= 1;
         else if (direction === 3) nextTilePosition.x -= 1;
-        const nextTile = this.map.children.find(tile =>
-          positionEquals(tile.position, nextTilePosition),
+        const nextTile = this.map.children.find((tile) =>
+          positionEquals(tile.position, nextTilePosition)
         );
         if (!nextTile || tiles.includes(nextTile)) continue;
         const tileParticipant = this.participants.find(
-          participant => nextTile === participant.tile,
+          (participant) => nextTile === participant.tile
         );
-        let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
-        if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.4);
+        let elevationChange =
+          nextTile.userData.elevation - currentTile.userData.elevation;
+        if (elevationChange < 0)
+          elevationChange = Math.max(elevationChange, -0.4);
         let modifier = 0;
         if (nextTile.userData.tree) modifier += 0.8;
         if (nextTile.userData.rock) modifier += 0.2;
@@ -455,11 +511,12 @@ class GameMap {
         else if (direction === 1) nextTilePosition.x += 1;
         else if (direction === 2) nextTilePosition.z -= 1;
         else if (direction === 3) nextTilePosition.x -= 1;
-        const nextTile = this.map.children.find(tile =>
-          positionEquals(tile.position, nextTilePosition),
+        const nextTile = this.map.children.find((tile) =>
+          positionEquals(tile.position, nextTilePosition)
         );
         if (!nextTile || tiles.includes(nextTile)) continue;
-        const elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+        const elevationChange =
+          nextTile.userData.elevation - currentTile.userData.elevation;
         let modifier = 0;
         if (nextTile.userData.rock) modifier += 0.8;
         let rangeDelta = Math.max(1, elevationChange + modifier);
@@ -484,25 +541,28 @@ class GameMap {
         else if (direction === 1) nextTilePosition.x += 1;
         else if (direction === 2) nextTilePosition.z -= 1;
         else if (direction === 3) nextTilePosition.x -= 1;
-        const nextTile = this.map.children.find(tile =>
-          positionEquals(tile.position, nextTilePosition),
+        const nextTile = this.map.children.find((tile) =>
+          positionEquals(tile.position, nextTilePosition)
         );
         if (!nextTile || tiles.includes(nextTile)) continue;
         const tileParticipant = this.participants.find(
-          participant => nextTile === participant.tile,
+          (participant) => nextTile === participant.tile
         );
         if (!nextTile.userData.tree && !tileParticipant) tiles.push(nextTile);
-        let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
-        if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.3);
+        let elevationChange =
+          nextTile.userData.elevation - currentTile.userData.elevation;
+        if (elevationChange < 0)
+          elevationChange = Math.max(elevationChange, -0.3);
         let modifier = 0;
         if (nextTile.userData.tree) modifier += 0.4;
         if (nextTile.userData.rock) modifier += 0.8;
-        if (nextTile.userData.texture === 'road') modifier -= 0.3;
-        if (nextTile.userData.texture === 'smallroad') modifier -= 0.2;
-        if (nextTile.userData.texture === 'snow') modifier += 0.4;
+        if (nextTile.userData.texture === "road") modifier -= 0.3;
+        if (nextTile.userData.texture === "smallroad") modifier -= 0.2;
+        if (nextTile.userData.texture === "snow") modifier += 0.4;
         const rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
         const newRemainingRange = remainingRange - rangeDelta;
-        if (newRemainingRange > 0) tileQueue.push([nextTile, newRemainingRange]);
+        if (newRemainingRange > 0)
+          tileQueue.push([nextTile, newRemainingRange]);
       }
     }
     return tiles;
@@ -511,18 +571,21 @@ class GameMap {
   async markInteractibles(range, action) {
     this.clearInteractible();
     this.interactible = await this.#determineInteractible[action](range);
-    this.interactible.forEach(tile => {
+    this.interactible.forEach((tile) => {
       const material = new MeshBasicMaterial({
         map: new CanvasTexture(
           createTerrainSide(
-            tile.userData.texture === 'snow' ? 'inverted-interactable' : 'interactable',
-          ),
+            tile.userData.texture === "snow"
+              ? "inverted-interactable"
+              : "interactable"
+          )
         ),
       });
       material.opacity = 0.6;
       material.transparent = true;
       const interactTile = new Mesh(new BoxGeometry(1, 0.1, 1), material);
-      interactTile.position.y = tile.position.y + 0.25 + (tile.userData.rock ? 1 : 0);
+      interactTile.position.y =
+        tile.position.y + 0.25 + (tile.userData.rock ? 1 : 0);
       interactTile.userData.type = action;
       tile.add(interactTile);
     });
@@ -534,12 +597,14 @@ class GameMap {
     const startPosition = startBlock.position;
     const endPosition = endBlock.position;
     const endPointVector = new Vector3(
-      this.currentParticipant.avatar.mesh.position.x + (endPosition.x - startPosition.x),
+      this.currentParticipant.avatar.mesh.position.x +
+        (endPosition.x - startPosition.x),
       this.currentParticipant.avatar.mesh.position.y +
         (endBlock.userData.elevation - startBlock.userData.elevation) +
         (endBlock.userData?.rock ? 1 : 0) -
         (startBlock.userData?.rock ? 1 : 0),
-      this.currentParticipant.avatar.mesh.position.z + (endPosition.z - startPosition.z),
+      this.currentParticipant.avatar.mesh.position.z +
+        (endPosition.z - startPosition.z)
     );
     await this.createMoveAnimation({
       mesh: this.currentParticipant.avatar.mesh,
@@ -549,25 +614,29 @@ class GameMap {
     this.currentParticipant.tile = endBlock;
     this.focus();
     this.clearInteractible();
-    this.phase = '';
-    return 'move';
+    this.phase = "";
+    return "move";
   }
 
   async attack(position) {
     const victim = this.participants.find(({ avatar }) =>
-      positionEquals(avatar.mesh.userData.childOf.position, this.intersectedObject.parent.position),
+      positionEquals(
+        avatar.mesh.userData.childOf.position,
+        this.intersectedObject.parent.position
+      )
     );
-    if (sameTeam(victim, this.currentParticipant)) console.log('same team');
+    if (sameTeam(victim, this.currentParticipant)) console.log("same team");
     const damage = rollDice(...this.currentParticipant.damage);
     this.currentParticipant.degradeWeapon(damage);
     this.currentParticipant.progressSkill(
-      this.currentParticipant.equipment.get('primary hand')?.subType || 'unarmed',
+      this.currentParticipant.equipment.get("primary hand")?.subType ||
+        "unarmed"
     );
     victim.distributeDamage(damage);
     if (victim.hp <= 0) victim.die();
     const vector = new Vector3().subVectors(
       victim.avatar.mesh.userData.childOf.position,
-      this.currentParticipant.avatar.mesh.userData.childOf.position,
+      this.currentParticipant.avatar.mesh.userData.childOf.position
     );
     vector.x += 0.5;
     vector.y += 2;
@@ -576,16 +645,16 @@ class GameMap {
     vector.y = (-(vector.y - 1) * this.canvas.height) / 2;
 
     this.clearInteractible();
-    this.phase = '';
-    return ['action', damage, { x: vector.x, y: vector.y }];
+    this.phase = "";
+    return ["action", damage, { x: vector.x, y: vector.y }];
   }
 
   clearInteractible() {
     if (!this.interactible) this.interactible = [];
-    this.interactible.forEach(tile =>
+    this.interactible.forEach((tile) =>
       tile.children
-        .find(actionTile => /action|move/.test(actionTile.userData.type))
-        ?.removeFromParent(),
+        .find((actionTile) => /action|move/.test(actionTile.userData.type))
+        ?.removeFromParent()
     );
     this.interactible = [];
   }
@@ -593,20 +662,22 @@ class GameMap {
   endTurn() {
     this.clearInteractible();
     this.currentParticipant.nextMove =
-      this.currentTime + 1 / (0.25 * this.currentParticipant.stats.get('speed').level);
+      this.currentTime +
+      1 / (0.25 * this.currentParticipant.stats.get("speed").level);
     this.participants.sort(turnSort);
     this.currentParticipant = this.participants[0];
     this.currentTime = this.currentParticipant.nextMove;
     if (this.currentParticipant.dead) return this.endTurn();
     this.focus();
-    if (enemies.members.includes(this.currentParticipant)) return this.performTurn();
+    if (enemies.members.includes(this.currentParticipant))
+      return this.performTurn();
     return this.currentParticipant.passable;
   }
 
   /**
    * Find a path from the current participant to the target
-   * @param {Vector3} startPosition 
-   * @param {Vector3} endPosition 
+   * @param {Vector3} startPosition
+   * @param {Vector3} endPosition
    */
   findPath(startPosition, endPosition) {
     const path = [];
@@ -620,10 +691,10 @@ class GameMap {
       }
       if (visited.has(current.position)) continue;
       visited.add(current.position);
-      const tiles = this.map.children.filter(tile =>
-        positionEquals(tile.position, current.position),
+      const tiles = this.map.children.filter((tile) =>
+        positionEquals(tile.position, current.position)
       );
-      tiles.forEach(tile => {
+      tiles.forEach((tile) => {
         const tilePosition = tile.position;
         const tileNeighbors = [
           [tilePosition.x + 1, tilePosition.z],
@@ -631,9 +702,9 @@ class GameMap {
           [tilePosition.x, tilePosition.z + 1],
           [tilePosition.x, tilePosition.z - 1],
         ];
-        tileNeighbors.forEach(neighbor => {
-          const neighborTile = this.map.children.find(
-            tile => positionEquals(tile.position, neighbor),
+        tileNeighbors.forEach((neighbor) => {
+          const neighborTile = this.map.children.find((tile) =>
+            positionEquals(tile.position, neighbor)
           );
           if (neighborTile && !visited.has(neighborTile.position)) {
             queue.push({
@@ -650,7 +721,11 @@ class GameMap {
   async performTurn() {
     return this.endTurn();
     if (!this.currentParticipant.personality)
-      this.currentParticipant.personality = oneOf(['aggressive', 'support', 'defensive']);
+      this.currentParticipant.personality = oneOf([
+        "aggressive",
+        "support",
+        "defensive",
+      ]);
     /**  
         if currentParticipant does not have a target 
           find a target
@@ -662,7 +737,7 @@ class GameMap {
     const target = this.currentParticipant.target;
     if (!target) {
       const targetCandidates = this.participants.filter(
-        participant => participant !== this.currentParticipant,
+        (participant) => participant !== this.currentParticipant
       );
       const target = oneOf(targetCandidates);
       this.currentParticipant.target = target;
@@ -670,34 +745,40 @@ class GameMap {
     const targetPosition = target.avatar.mesh.userData.childOf.position;
     const targetDistance = distance(
       this.currentParticipant.avatar.mesh.userData.childOf.position,
-      targetPosition,
+      targetPosition
     );
     if (targetDistance <= this.currentParticipant.range) {
       return this.attack(targetPosition);
     } else {
       const path = await this.findPath(
         this.currentParticipant.avatar.mesh.userData.childOf.position,
-        targetPosition,
+        targetPosition
       );
       const nextTile = path[1];
       if (nextTile) {
         const nextTilePosition = nextTile.position;
         const nextTileDistance = distance(
           this.currentParticipant.avatar.mesh.userData.childOf.position,
-          nextTilePosition,
+          nextTilePosition
         );
         if (nextTileDistance <= this.currentParticipant.move) {
           return this.move(nextTilePosition);
         }
-    await this.initiateAttack();
-    const charactersInRange = characters.filter(character => this.interactible.find(tile => character.tile === tile));
-    if (
-      this.currentParticipant.target &&
-      charactersInRange.find(character => character === this.currentParticipant.target)
-    ) {
+        await this.initiateAttack();
+        const charactersInRange = characters.filter((character) =>
+          this.interactible.find((tile) => character.tile === tile)
+        );
+        if (
+          this.currentParticipant.target &&
+          charactersInRange.find(
+            (character) => character === this.currentParticipant.target
+          )
+        ) {
+        }
+        // if (this.currentParticipant.personality === 'aggressive') {
+        // }
+      }
     }
-    // if (this.currentParticipant.personality === 'aggressive') {
-    // }
   }
 
   createMoveAnimation({
@@ -706,22 +787,31 @@ class GameMap {
     endPosition,
     endPointVector,
   }) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       mesh.userData.mixer = new AnimationMixer(mesh);
       if (!endPointVector)
-        endPointVector = new Vector3(-endPosition.x, startPosition.y, -endPosition.z);
+        endPointVector = new Vector3(
+          -endPosition.x,
+          startPosition.y,
+          -endPosition.z
+        );
       const animationTiming = 0.3;
       const track = new VectorKeyframeTrack(
-        '.position',
+        ".position",
         [0, animationTiming],
-        [startPosition.x, startPosition.y, startPosition.z, ...endPointVector.toArray()],
+        [
+          startPosition.x,
+          startPosition.y,
+          startPosition.z,
+          ...endPointVector.toArray(),
+        ]
       );
       const animationClip = new AnimationClip(null, -1, [track]);
       const animationAction = mesh.userData.mixer.clipAction(animationClip);
       animationAction.play();
       mesh.userData.clock = new Clock();
       this.animationsObjects.push(mesh);
-      mesh.userData.mixer.addEventListener('loop', () => {
+      mesh.userData.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
           mesh.position.set(...endPointVector.toArray());
           resolve();
@@ -734,21 +824,28 @@ class GameMap {
   }
 
   async removeChildren() {
-    this.intersectedObject.children.forEach(child => {
-      const character = characters.members.find(character => character.avatar.mesh === child);
+    this.intersectedObject.children.forEach((child) => {
+      const character = characters.members.find(
+        (character) => character.avatar.mesh === child
+      );
       character.placed = false;
       child.removeFromParent();
     });
   }
 
-  async placeCharacter({ character, characterIndex }, placement = this.intersectedObject, enemy) {
-    placement.children.forEach(child => child.removeFromParent());
+  async placeCharacter(
+    { character, characterIndex },
+    placement = this.intersectedObject,
+    enemy
+  ) {
+    placement.children.forEach((child) => child.removeFromParent());
     if (!character) character = characters.members[characterIndex];
     character.tile = placement;
     character.placed = true;
     character.position = { ...placement.position };
     const characterAtPosition = characters.members.find(
-      char => char !== character && positionEquals(char.position, character.position),
+      (char) =>
+        char !== character && positionEquals(char.position, character.position)
     );
     if (characterAtPosition) characterAtPosition.position = null;
     character.avatar.mesh.position.y =
@@ -760,22 +857,39 @@ class GameMap {
 
   determineIntersectionObject() {
     this.raycaster.setFromCamera(this.mousePosition, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.map?.children || [], true);
-    const intersect = intersects.find(({ object }) => object?.userData?.type === this.phase);
+    const intersects = this.raycaster.intersectObjects(
+      this.map?.children || [],
+      true
+    );
+    const intersect = intersects.find(
+      ({ object }) => object?.userData?.type === this.phase
+    );
     if (intersect && intersect?.object?.userData?.type === this.phase) {
-      if (this.intersectedObject && this.intersectedObject !== intersect.object) {
-        this.intersectedObject.material.map = this.intersectedObject.userData.materialMap;
-        this.intersectedObject.material.opacity = this.intersectedObject.userData.opacity;
+      if (
+        this.intersectedObject &&
+        this.intersectedObject !== intersect.object
+      ) {
+        this.intersectedObject.material.map =
+          this.intersectedObject.userData.materialMap;
+        this.intersectedObject.material.opacity =
+          this.intersectedObject.userData.opacity;
       }
       if (this.intersectedObject === intersect.object) return;
-      this.intersectedObject = intersect.object.userData.childOf || intersect.object;
-      this.intersectedObject.userData.materialMap = this.intersectedObject.material.map;
-      this.intersectedObject.userData.opacity = this.intersectedObject.material.opacity;
-      this.intersectedObject.material.map = new CanvasTexture(createTerrainSide('highlight'));
+      this.intersectedObject =
+        intersect.object.userData.childOf || intersect.object;
+      this.intersectedObject.userData.materialMap =
+        this.intersectedObject.material.map;
+      this.intersectedObject.userData.opacity =
+        this.intersectedObject.material.opacity;
+      this.intersectedObject.material.map = new CanvasTexture(
+        createTerrainSide("highlight")
+      );
       this.intersectedObject.material.opacity = 1;
     } else if (this.intersectedObject) {
-      this.intersectedObject.material.map = this.intersectedObject.userData.materialMap;
-      this.intersectedObject.material.opacity = this.intersectedObject.userData.opacity;
+      this.intersectedObject.material.map =
+        this.intersectedObject.userData.materialMap;
+      this.intersectedObject.material.opacity =
+        this.intersectedObject.userData.opacity;
       this.intersectedObject = false;
     }
   }
@@ -783,12 +897,12 @@ class GameMap {
   render() {
     if (this.focalPoint) this.focalPoint.rotation.y = this.rotation?.dx || 0;
     this.renderer.render(this.scene, this.camera);
-    this.animationsObjects.forEach(mesh => {
+    this.animationsObjects.forEach((mesh) => {
       if (mesh.userData.clock && mesh.userData.mixer) {
         mesh.userData.mixer.update(mesh.userData.clock.getDelta());
       }
     });
-    requestAnimationFrame(time => this.render(time));
+    requestAnimationFrame((time) => this.render(time));
   }
 }
 expose(GameMap);
