@@ -2,7 +2,6 @@ import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
-import { Character } from '../character.js';
 import { Crew } from '../services/crew.js';
 
 class CrewContent extends LitElement {
@@ -53,7 +52,7 @@ class CrewContent extends LitElement {
 
   constructor() {
     super();
-    /** @type {Character[]} */
+    /** @type {Crew} */
     this.crew = new Crew();
     this.crew.ready.then(() => {
       Promise.all(this.crew.members.map(member => member.avatar.ready)).then(() => {

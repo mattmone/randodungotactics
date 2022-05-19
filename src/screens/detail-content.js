@@ -29,17 +29,6 @@ class DetailContent extends LitElement {
           display: flex;
           flex-direction: column;
         }
-        #equip {
-          margin: 0 8px 8px 8px;
-          align-items: center;
-          justify-content: center;
-          text-transform: uppercase;
-        }
-
-        #equip[equipped] {
-          border-color:var(--accent-color);
-          color:var(--accent-color);
-        }]
       `,
     ];
   }
@@ -51,11 +40,6 @@ class DetailContent extends LitElement {
   updated() {
     if (!this.item) return;
     import(`./details/${this.item.type}-detail.js`);
-  }
-
-  equip() {
-    if (this.equipped) this.dispatchEvent(new CustomEvent('unequip-item', { detail: this.item }));
-    else this.dispatchEvent(new CustomEvent('equip-item', { detail: this.item }));
   }
 
   render() {
@@ -77,9 +61,7 @@ class DetailContent extends LitElement {
         ${this.item.type === 'gem' ? html` <gem-detail .item=${this.item}></gem-detail> ` : ''}
       </div>
 
-      <button id="equip" ?equipped=${this.equipped} @click=${this.equip}>
-        ${this.equipped ? 'equipped' : 'equip'}
-      </button>
+      <slot name="actions"></slot>
     `;
   }
 }

@@ -18,4 +18,10 @@ export const buttonStyles = css`
     cursor: not-allowed;
     opacity: 0.4;
   }
+  button:focus-visible {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    outline: 1px solid var(--accent-color);
+    text-decoration: underline;
+  }
 `;

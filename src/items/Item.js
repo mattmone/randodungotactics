@@ -26,7 +26,18 @@ export class Item {
     this.initialize(item, true);
   }
 
-  initialize({ power, strength, name, effects, created = new Date() }, skipSave) {
+  initialize(
+    {
+      power,
+      strength,
+      name,
+      effects = new Map(),
+      gemSlots = 0,
+      gems = new Map(),
+      created = new Date(),
+    },
+    skipSave,
+  ) {
     /** @type {String} */
     this.name = name;
     /** @type {Number} */
@@ -38,6 +49,8 @@ export class Item {
     /** @type {Map<String,Effect>} */
     this.effects = effects;
     this.itemType = this.constructor.name;
+    this.gemSlots = gemSlots;
+    this.gems = gems;
     if (!skipSave) this.#saveItem();
     this._initialized = true;
     this.#created = created;
@@ -57,6 +70,10 @@ export class Item {
       if (this.destroyed) return;
       set(this.id, this.serialized, idbStore);
     }, 100);
+  }
+
+  get price() {
+    return this.strength + this.power + this.gemSlots;
   }
 
   get serialized() {

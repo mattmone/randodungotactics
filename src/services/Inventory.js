@@ -10,12 +10,17 @@ export class Inventory {
 
   constructor(id = 'player') {
     this.id = id;
-    get(`inventory/${id}`).then(async storage => {
-      if (storage.items)
+    this.refresh();
+  }
+
+  refresh() {
+    return get(`inventory/${this.id}`).then(async storage => {
+      if (storage?.items)
         this.#items = await Promise.all(storage.items.map(item => this.#build(item)));
-      if (storage.dungocoin) this.#dungocoin = storage.dungocoin;
+      if (storage?.dungocoin) this.#dungocoin = storage.dungocoin;
       await Promise.all(this.#items.map(item => item.initialized));
       this.#ready = true;
+      return true;
     });
   }
 
@@ -70,6 +75,65 @@ export class Inventory {
   set items(items) {
     this.#items = items;
   }
+  get weapons() {
+    return this.#items
+      .filter(item => item.itemType === 'Weapon')
+      .sort((a, b) => {
+        if (a.name < b.name) return -1;
+        if (a.name > b.name) return 1;
+        return 0;
+      })
+      .sort((a, b) => {
+        if (a.subType < b.subType) return -1;
+        if (a.subType > b.subType) return 1;
+        return 0;
+      });
+  }
+  get swords() {
+    return this.#items.filter(item => item.subType === 'Sword');
+  }
+  get axes() {
+    return this.#items.filter(item => item.subType === 'Axe');
+  }
+  get knives() {
+    return this.#items.filter(item => item.subType === 'Knife');
+  }
+  get polearms() {
+    return this.#items.filter(item => item.subType === 'Polearm');
+  }
+  get crossbows() {
+    return this.#items.filter(item => item.subType === 'Crossbow');
+  }
+  get shortbows() {
+    return this.#items.filter(item => item.subType === 'Shortbow');
+  }
+  get longbows() {
+    return this.#items.filter(item => item.subType === 'Longbow');
+  }
+  get bodies() {
+    return this.#items.filter(item => item.itemType === 'Body');
+  }
+  get heads() {
+    return this.#items.filter(item => item.itemType === 'Head');
+  }
+  get hands() {
+    return this.#items.filter(item => item.itemType === 'Hands');
+  }
+  get boots() {
+    return this.#items.filter(item => item.itemType === 'Boots');
+  }
+  get shields() {
+    return this.#items.filter(item => item.subType === 'Shield');
+  }
+  get rings() {
+    return this.#items.filter(item => item.subType === 'Ring');
+  }
+  get gems() {
+    return this.#items.filter(item => item.itemType === 'Gem');
+  }
+  get necklaces() {
+    return this.#items.filter(item => item.itemType === 'Necklace');
+  }
   // #endregion
   addDungocoin(amount) {
     this.#dungocoin += amount;
@@ -88,13 +152,14 @@ export class Inventory {
     this.#saveInventory();
   }
 
-  remove(removedItem) {
+  remove(removedItem, skipDestroy) {
+    if (!(removedItem instanceof Item)) return;
     this.#items = this.#items.filter(item => item !== removedItem);
-    removedItem.destroy();
+    if (!skipDestroy) removedItem.destroy();
     this.#saveInventory();
   }
 
-  async random({ quantity = 1, level = 1 }) {
+  async random({ quantity, level } = { quantity: 1, level: 1 }) {
     const { randomItem } = await import('../utils/randomItem.js');
     const items = await Promise.all(
       Array(quantity)

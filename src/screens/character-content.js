@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
+import { selectorStyles } from '../styles/selector.styles.js';
 import { dieDisplay } from '../utils/dieDisplay.js';
 import { Inventory } from '../services/Inventory.js';
 
@@ -19,6 +20,7 @@ class CharacterContent extends LitElement {
     return [
       progressStyles,
       buttonStyles,
+      selectorStyles,
       commonStyles,
       css`
         * {
@@ -72,27 +74,6 @@ class CharacterContent extends LitElement {
           aspect-ratio: 1 / 1;
           border: 1px solid var(--primary-color);
           border-radius: var(--border-radius);
-        }
-        #selector {
-          display: flex;
-          flex-direction: row;
-          height: max-content;
-        }
-        #selector button {
-          flex: 1;
-          justify-content: center;
-          text-transform: uppercase;
-          border-radius: 0;
-        }
-        #selector button:first-child {
-          border-radius: var(--border-radius) 0 0 var(--border-radius);
-        }
-        #selector button:last-child {
-          border-radius: 0 var(--border-radius) var(--border-radius) 0;
-        }
-        button[selected] {
-          background-color: var(--primary-color);
-          color: var(--primary-dark);
         }
         .equipment-slot[equipped] {
           color: var(--accent-color);
@@ -218,7 +199,7 @@ class CharacterContent extends LitElement {
           <div class="stat"><span>range</span><span>${this.character.attackRange}</span></div>
         </div>
       </div>
-      <div id="selector">
+      <div class="selector">
         <button ?selected=${this.category === 'stats'} @click=${this.categorySelect('stats')}>
           Stats
         </button>

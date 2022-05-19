@@ -1,5 +1,6 @@
 import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from 'styles/button.styles.js';
+import { commonStyles } from 'styles/common.styles.js';
 
 const mappings = {
   'primary hand': ['weapon'],
@@ -10,6 +11,7 @@ const mappings = {
 class EquipmentContent extends LitElement {
   static get styles() {
     return [
+      commonStyles,
       buttonStyles,
       css`
         #equipment-locations {
@@ -20,7 +22,8 @@ class EquipmentContent extends LitElement {
           margin-top: 4px;
           overflow: auto;
         }
-        button[equipped] {
+        button[equipped],
+        #unequip {
           color: var(--accent-color);
           border-color: var(--accent-color);
         }
@@ -35,6 +38,14 @@ class EquipmentContent extends LitElement {
           border: 1px solid var(--accent-color);
           background: var(--circle-fill);
           pointer-events: none;
+        }
+
+        #equip,
+        #unequip {
+          margin: 0 8px 8px 8px;
+          align-items: center;
+          justify-content: center;
+          text-transform: uppercase;
         }
       `,
     ];
@@ -78,9 +89,9 @@ class EquipmentContent extends LitElement {
     };
   }
 
-  async equip({ detail: item }) {
-    const removedItem = this.character.equip(this.selectedCatgory, item);
-    this.inventory.remove(item);
+  async equip() {
+    const removedItem = this.character.equip(this.selectedCatgory, this.detailItem);
+    this.inventory.remove(this.detailItem, true);
     if (removedItem) this.inventory.add(removedItem);
     this.requestUpdate();
   }
@@ -95,9 +106,18 @@ class EquipmentContent extends LitElement {
     this.dispatchEvent(new CustomEvent('equipment-closing'));
   }
 
+  async refreshInventory() {
+    await this.inventory.refresh();
+    this.requestUpdate();
+  }
+
   render() {
     return html`<slot></slot>
-      <side-screen id="equipment" @before-close=${this.#equipmentScreenClosing}>
+      <side-screen
+        id="equipment"
+        @before-open=${this.refreshInventory}
+        @before-close=${this.#equipmentScreenClosing}
+      >
         <div id="equipment-locations">
           ${this.equippedEntries
             ?.filter(([location, item]) => location === this.selectedCatgory)
@@ -125,10 +145,25 @@ class EquipmentContent extends LitElement {
         <side-screen id="details">
           <detail-content
             ?equipped=${this.equippedItems.includes(this.detailItem)}
-            @equip-item=${this.equip}
-            @unequip-item=${this.unequip}
             .item=${this.detailItem}
-          ></detail-content>
+          >
+            <button
+              ?hidden=${this.equippedItems.includes(this.detailItem)}
+              id="equip"
+              slot="actions"
+              @click=${this.equip}
+            >
+              Equip
+            </button>
+            <button
+              ?hidden=${!this.equippedItems.includes(this.detailItem)}
+              id="unequip"
+              slot="actions"
+              @click=${this.unequip}
+            >
+              Unequip
+            </button>
+          </detail-content>
         </side-screen>
       </side-screen>`;
   }

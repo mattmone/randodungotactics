@@ -203,9 +203,7 @@ export class Crew {
     this.#saveCrew();
   }
 
-  async random(
-    { quantity, level, withEquipment } = { quantity: 1, level: 1, withEquipment: false },
-  ) {
+  async random({ quantity = 1, level = 1, withEquipment = false }) {
     const distributePoints = (points, possibilities, max = 10, favored) => {
       while (points > 0) {
         const choices = Array.from(points % 2 === 0 && favored ? favored : possibilities.keys());
@@ -220,99 +218,99 @@ export class Crew {
         }
       }
     };
-    for (let i = 0; i < quantity; i++) {
-      const characterOptions = {};
-      const { names } = await import('../constants/names.js');
-      characterOptions.name = oneOf(names);
-      characterOptions.color = oneOf(colors);
-      characterOptions.stats = new Map([
-        ['strength', { level: 1, progression: 0 }],
-        [
-          'constitution',
-          {
-            level: 1,
-            progression: 0,
-          },
-        ],
-        [
-          'dexterity',
-          {
-            level: 1,
-            progression: 0,
-          },
-        ],
-        ['speed', { level: 1, progression: 0 }],
-        [
-          'intellect',
-          {
-            level: 1,
-            progression: 0,
-          },
-        ],
-        ['magic', { level: 1, progression: 0 }],
-      ]);
-      const focus = oneOf(['stealth', 'magic', 'melee', 'ranged']);
-      const favoredStats = [];
-      if (focus === 'stealth') {
-        favoredStats.push('speed', 'dexterity', 'intellect');
-      } else if (focus === 'magic') {
-        favoredStats.push('magic', 'intellect', 'dexterity');
-      } else if (focus === 'melee') {
-        favoredStats.push('strength', 'constitution', 'dexterity');
-      } else if (focus === 'ranged') {
-        favoredStats.push('dexterity', 'speed', 'strength');
-      }
-      const skills = [];
-      if (focus === 'stealth') {
-        skills.push(
-          ['athletics', { level: 0, progression: 0 }],
-          ['acrobatics', { level: 0, progression: 0 }],
-          ['flanking', { level: 0, progression: 0 }],
-          ['defend', { level: 0, progression: 0 }],
-          [oneOf(['sword', 'knife', 'crossbow']), { level: 0, progression: 0 }],
-        );
-      } else if (focus === 'magic') {
-        skills.push(
-          ['arcana: destruction', { level: 0, progression: 0 }],
-          ['arcana: healing', { level: 0, progression: 0 }],
-          ['arcana: support', { level: 0, progression: 0 }],
-          ['defend', { level: 0, progression: 0 }],
-          ['staff', { level: 0, progression: 0 }],
-        );
-      } else if (focus === 'melee') {
-        const weapons = ['sword', 'axe', 'knife', 'polearm', 'unarmed'];
-        const weapon1 = oneOf(weapons);
-        const weapon2 = oneOf(weapons.filter(weapon => weapon !== weapon1));
-        skills.push(
-          ['athletics', { level: 0, progression: 0 }],
-          ['acrobatics', { level: 0, progression: 0 }],
-          ['defend', { level: 0, progression: 0 }],
-          [weapon1, { level: 0, progression: 0 }],
-          [weapon2, { level: 0, progression: 0 }],
-        );
-      } else if (focus === 'ranged') {
-        const weapons = ['shortbow', 'longbow', 'crossbow'];
-        const weapon1 = oneOf(weapons);
-        skills.push(
-          ['athletics', { level: 0, progression: 0 }],
-          ['acrobatics', { level: 0, progression: 0 }],
-          ['flanking', { level: 0, progression: 0 }],
-          ['defend', { level: 0, progression: 0 }],
-          [weapon1, { level: 0, progression: 0 }],
-        );
-      }
+    return Promise.all(
+      new Array(quantity).fill(0).map(async () => {
+        const characterOptions = {};
+        const { names } = await import('../constants/names.js');
+        characterOptions.name = oneOf(names);
+        characterOptions.color = oneOf(colors);
+        characterOptions.stats = new Map([
+          ['strength', { level: 1, progression: 0 }],
+          [
+            'constitution',
+            {
+              level: 1,
+              progression: 0,
+            },
+          ],
+          [
+            'dexterity',
+            {
+              level: 1,
+              progression: 0,
+            },
+          ],
+          ['speed', { level: 1, progression: 0 }],
+          [
+            'intellect',
+            {
+              level: 1,
+              progression: 0,
+            },
+          ],
+          ['magic', { level: 1, progression: 0 }],
+        ]);
+        const focus = oneOf(['stealth', 'magic', 'melee', 'ranged']);
+        const favoredStats = [];
+        if (focus === 'stealth') {
+          favoredStats.push('speed', 'dexterity', 'intellect');
+        } else if (focus === 'magic') {
+          favoredStats.push('magic', 'intellect', 'dexterity');
+        } else if (focus === 'melee') {
+          favoredStats.push('strength', 'constitution', 'dexterity');
+        } else if (focus === 'ranged') {
+          favoredStats.push('dexterity', 'speed', 'strength');
+        }
+        const skills = [];
+        if (focus === 'stealth') {
+          skills.push(
+            ['athletics', { level: 0, progression: 0 }],
+            ['acrobatics', { level: 0, progression: 0 }],
+            ['flanking', { level: 0, progression: 0 }],
+            ['defend', { level: 0, progression: 0 }],
+            [oneOf(['sword', 'knife', 'crossbow']), { level: 0, progression: 0 }],
+          );
+        } else if (focus === 'magic') {
+          skills.push(
+            ['arcana: destruction', { level: 0, progression: 0 }],
+            ['arcana: healing', { level: 0, progression: 0 }],
+            ['arcana: support', { level: 0, progression: 0 }],
+            ['defend', { level: 0, progression: 0 }],
+            ['staff', { level: 0, progression: 0 }],
+          );
+        } else if (focus === 'melee') {
+          const weapons = ['sword', 'axe', 'knife', 'polearm', 'unarmed'];
+          const weapon1 = oneOf(weapons);
+          const weapon2 = oneOf(weapons.filter(weapon => weapon !== weapon1));
+          skills.push(
+            ['athletics', { level: 0, progression: 0 }],
+            ['acrobatics', { level: 0, progression: 0 }],
+            ['defend', { level: 0, progression: 0 }],
+            [weapon1, { level: 0, progression: 0 }],
+            [weapon2, { level: 0, progression: 0 }],
+          );
+        } else if (focus === 'ranged') {
+          const weapons = ['shortbow', 'longbow', 'crossbow'];
+          const weapon1 = oneOf(weapons);
+          skills.push(
+            ['athletics', { level: 0, progression: 0 }],
+            ['acrobatics', { level: 0, progression: 0 }],
+            ['flanking', { level: 0, progression: 0 }],
+            ['defend', { level: 0, progression: 0 }],
+            [weapon1, { level: 0, progression: 0 }],
+          );
+        }
 
-      characterOptions.skills = new Map(skills);
-      let statPoints = 4 * 6 * level;
-      let skillPoints = 4 * 6 * level;
-      distributePoints(statPoints, characterOptions.stats, level * 10, favoredStats);
-      distributePoints(skillPoints, characterOptions.skills, level * 10);
+        characterOptions.skills = new Map(skills);
+        let statPoints = 4 * 6 * level;
+        let skillPoints = 4 * 6 * level;
+        distributePoints(statPoints, characterOptions.stats, level * 10, favoredStats);
+        distributePoints(skillPoints, characterOptions.skills, level * 10);
 
-      const character = this.add(characterOptions);
+        const character = this.add(characterOptions);
 
-      if (!withEquipment) return character;
-      import('../utils/randomItem.js').then(
-        async ({
+        if (!withEquipment) return character;
+        const {
           randomHead,
           randomBody,
           randomBoots,
@@ -325,24 +323,23 @@ export class Crew {
           randomCrossbow,
           randomStaff,
           randomHands,
-        }) => {
-          const possibilities = [];
-          if (character.skills.has('sword')) possibilities.push(randomSword);
-          if (character.skills.has('axe')) possibilities.push(randomAxe);
-          if (character.skills.has('polearm')) possibilities.push(randomPolearm);
-          if (character.skills.has('knife')) possibilities.push(randomKnife);
-          if (character.skills.has('shortbow')) possibilities.push(randomShortbow);
-          if (character.skills.has('longbow')) possibilities.push(randomLongbow);
-          if (character.skills.has('crossbow')) possibilities.push(randomCrossbow);
-          if (character.skills.has('staff')) possibilities.push(randomStaff);
-          if (possibilities.length) character.equip('primary hand', await oneOf(possibilities)());
-          if (rollDice(6) >= 3) character.equip('body', await randomBody());
-          if (rollDice(6) >= 4) character.equip('head', await randomHead());
-          if (rollDice(6) >= 5) character.equip('boots', await randomBoots());
-          if (rollDice(6) >= 6) character.equip('hands', await randomHands());
-        },
-      );
-      return character;
-    }
+        } = await import('../utils/randomItem.js');
+        const possibilities = [];
+        if (character.skills.has('sword')) possibilities.push(randomSword);
+        if (character.skills.has('axe')) possibilities.push(randomAxe);
+        if (character.skills.has('polearm')) possibilities.push(randomPolearm);
+        if (character.skills.has('knife')) possibilities.push(randomKnife);
+        if (character.skills.has('shortbow')) possibilities.push(randomShortbow);
+        if (character.skills.has('longbow')) possibilities.push(randomLongbow);
+        if (character.skills.has('crossbow')) possibilities.push(randomCrossbow);
+        if (character.skills.has('staff')) possibilities.push(randomStaff);
+        if (possibilities.length) character.equip('primary hand', await oneOf(possibilities)());
+        if (rollDice(6) >= 3) character.equip('body', await randomBody());
+        if (rollDice(6) >= 4) character.equip('head', await randomHead());
+        if (rollDice(6) >= 5) character.equip('boots', await randomBoots());
+        if (rollDice(6) >= 6) character.equip('hands', await randomHands());
+        return character;
+      }),
+    );
   }
 }

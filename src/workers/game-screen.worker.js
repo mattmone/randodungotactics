@@ -411,32 +411,34 @@ class GameMap {
 
   rangeItOut(startingTile, range, priorDirection) {
     const tiles = [];
-    for (let direction = 0; direction < 4; direction++) {
-      if (direction === priorDirection) continue;
-      let remainingRange = range;
-      let currentTile = startingTile;
-      const nextTilePosition = { ...currentTile.position };
-      if (direction === 0) nextTilePosition.z += 1;
-      else if (direction === 1) nextTilePosition.x += 1;
-      else if (direction === 2) nextTilePosition.z -= 1;
-      else if (direction === 3) nextTilePosition.x -= 1;
-      const nextTile = this.map.children.find(tile =>
-        positionEquals(tile.position, nextTilePosition),
-      );
-      if (!nextTile) continue;
-      const tileParticipant = this.participants.find(participant => nextTile === participant.tile);
-      let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
-      if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.4);
-      let modifier = 0;
-      if (nextTile.userData.tree) modifier += 0.8;
-      if (nextTile.userData.rock) modifier += 0.2;
-      if (tileParticipant) modifier += 0.8;
-      let rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
-      remainingRange -= rangeDelta;
-      currentTile = nextTile;
-      if (remainingRange > 0) {
-        tiles.push(nextTile);
-        tiles.push(...this.rangeItOut(currentTile, remainingRange, (direction + 2) % 4));
+    const tileQueue = [[startingTile, range]];
+    while (tileQueue.length) {
+      const [currentTile, remainingRange] = tileQueue.shift();
+      for (let direction = 0; direction < 4; direction++) {
+        const nextTilePosition = { ...currentTile.position };
+        if (direction === 0) nextTilePosition.z += 1;
+        else if (direction === 1) nextTilePosition.x += 1;
+        else if (direction === 2) nextTilePosition.z -= 1;
+        else if (direction === 3) nextTilePosition.x -= 1;
+        const nextTile = this.map.children.find(tile =>
+          positionEquals(tile.position, nextTilePosition),
+        );
+        if (!nextTile || tiles.includes(nextTile)) continue;
+        const tileParticipant = this.participants.find(
+          participant => nextTile === participant.tile,
+        );
+        let elevationChange = nextTile.userData.elevation - currentTile.userData.elevation;
+        if (elevationChange < 0) elevationChange = Math.max(elevationChange, -0.4);
+        let modifier = 0;
+        if (nextTile.userData.tree) modifier += 0.8;
+        if (nextTile.userData.rock) modifier += 0.2;
+        if (tileParticipant) modifier += 0.8;
+        let rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
+        const newRemainingRange = remainingRange - rangeDelta;
+        if (newRemainingRange >= 0) {
+          tiles.push(nextTile);
+          tileQueue.push([nextTile, newRemainingRange]);
+        }
       }
     }
     return tiles;
@@ -462,7 +464,6 @@ class GameMap {
         if (nextTile.userData.rock) modifier += 0.8;
         let rangeDelta = Math.max(1, elevationChange + modifier);
         const newRemainingRange = remainingRange - rangeDelta;
-        console.log(newRemainingRange);
         if (newRemainingRange >= 0) {
           tiles.push(nextTile);
           tileQueue.push([nextTile, newRemainingRange]);
@@ -472,13 +473,12 @@ class GameMap {
     return tiles;
   }
 
-  async walkItOut(startingTile, range, priorDirection) {
+  async walkItOut(startingTile, range) {
     const tiles = [];
     const tileQueue = [[startingTile, range]];
     while (tileQueue.length) {
       const [currentTile, remainingRange] = tileQueue.shift();
       for (let direction = 0; direction < 4; direction++) {
-        if (direction === priorDirection) continue;
         const nextTilePosition = { ...currentTile.position };
         if (direction === 0) nextTilePosition.z += 1;
         else if (direction === 1) nextTilePosition.x += 1;
@@ -497,8 +497,8 @@ class GameMap {
         let modifier = 0;
         if (nextTile.userData.tree) modifier += 0.4;
         if (nextTile.userData.rock) modifier += 0.8;
-        if (nextTile.userData.texture === 'road') modifier -= 0.2;
-        if (nextTile.userData.texture === 'smallRoad') modifier -= 0.1;
+        if (nextTile.userData.texture === 'road') modifier -= 0.3;
+        if (nextTile.userData.texture === 'smallroad') modifier -= 0.2;
         if (nextTile.userData.texture === 'snow') modifier += 0.4;
         const rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
         const newRemainingRange = remainingRange - rangeDelta;
@@ -603,12 +603,101 @@ class GameMap {
     return this.currentParticipant.passable;
   }
 
-  performTurn() {
+  /**
+   * Find a path from the current participant to the target
+   * @param {Vector3} startPosition 
+   * @param {Vector3} endPosition 
+   */
+  findPath(startPosition, endPosition) {
+    const path = [];
+    const queue = [{ position: startPosition, distance: 0 }];
+    const visited = new Set();
+    while (queue.length) {
+      const current = queue.shift();
+      if (positionEquals(current.position, endPosition)) {
+        path.push(current.position);
+        return path;
+      }
+      if (visited.has(current.position)) continue;
+      visited.add(current.position);
+      const tiles = this.map.children.filter(tile =>
+        positionEquals(tile.position, current.position),
+      );
+      tiles.forEach(tile => {
+        const tilePosition = tile.position;
+        const tileNeighbors = [
+          [tilePosition.x + 1, tilePosition.z],
+          [tilePosition.x - 1, tilePosition.z],
+          [tilePosition.x, tilePosition.z + 1],
+          [tilePosition.x, tilePosition.z - 1],
+        ];
+        tileNeighbors.forEach(neighbor => {
+          const neighborTile = this.map.children.find(
+            tile => positionEquals(tile.position, neighbor),
+          );
+          if (neighborTile && !visited.has(neighborTile.position)) {
+            queue.push({
+              position: neighborTile.position,
+              distance: current.distance + 1,
+            });
+          }
+        });
+      });
+    }
+    return path;
+  }
+
+  async performTurn() {
     return this.endTurn();
     if (!this.currentParticipant.personality)
       this.currentParticipant.personality = oneOf(['aggressive', 'support', 'defensive']);
-    if (this.currentParticipant.personality === 'aggressive') {
+    /**  
+        if currentParticipant does not have a target 
+          find a target
+        if target is in range
+          attack target
+        else
+          move towards target
+    */
+    const target = this.currentParticipant.target;
+    if (!target) {
+      const targetCandidates = this.participants.filter(
+        participant => participant !== this.currentParticipant,
+      );
+      const target = oneOf(targetCandidates);
+      this.currentParticipant.target = target;
     }
+    const targetPosition = target.avatar.mesh.userData.childOf.position;
+    const targetDistance = distance(
+      this.currentParticipant.avatar.mesh.userData.childOf.position,
+      targetPosition,
+    );
+    if (targetDistance <= this.currentParticipant.range) {
+      return this.attack(targetPosition);
+    } else {
+      const path = await this.findPath(
+        this.currentParticipant.avatar.mesh.userData.childOf.position,
+        targetPosition,
+      );
+      const nextTile = path[1];
+      if (nextTile) {
+        const nextTilePosition = nextTile.position;
+        const nextTileDistance = distance(
+          this.currentParticipant.avatar.mesh.userData.childOf.position,
+          nextTilePosition,
+        );
+        if (nextTileDistance <= this.currentParticipant.move) {
+          return this.move(nextTilePosition);
+        }
+    await this.initiateAttack();
+    const charactersInRange = characters.filter(character => this.interactible.find(tile => character.tile === tile));
+    if (
+      this.currentParticipant.target &&
+      charactersInRange.find(character => character === this.currentParticipant.target)
+    ) {
+    }
+    // if (this.currentParticipant.personality === 'aggressive') {
+    // }
   }
 
   createMoveAnimation({
