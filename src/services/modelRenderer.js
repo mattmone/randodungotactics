@@ -58,6 +58,7 @@ class ModelRenderer {
           walkAction.setEffectiveWeight(0);
           idleAction.play();
           walkAction.play();
+          gltf.scene.animations.push(idleAction, walkAction);
 
           resolve(gltf)
           console.log(gltf);
