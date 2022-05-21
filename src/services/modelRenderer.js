@@ -6,6 +6,7 @@ import {
   Mesh,
   BoxGeometry,
   MeshStandardMaterial,
+  AnimationMixer
 } from "../../libs/three.module.js";
 import {
   GLTFLoader
@@ -43,6 +44,21 @@ class ModelRenderer {
         "../models/character.glb",
         // called when the resource is loaded
         function (gltf) {
+          const {animations} = gltf;
+
+          const mixer = new AnimationMixer(model);
+
+          const idleAction = mixer.clipAction(animations[0]);
+          const walkAction = mixer.clipAction(animations[1]);
+          idleAction.enabled = true;
+          idleAction.setEffectiveTimeScale(1);
+          idleAction.setEffectiveWeight(1);
+          walkAction.enabled = true;
+          walkAction.setEffectiveTimeScale(1);
+          walkAction.setEffectiveWeight(0);
+          idleAction.play();
+          walkAction.play();
+
           resolve(gltf)
           console.log(gltf);
           // gltf.animations; // Array<THREE.AnimationClip>
