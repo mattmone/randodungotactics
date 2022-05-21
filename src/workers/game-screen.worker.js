@@ -815,7 +815,7 @@ class GameMap {
       const animationClip = new AnimationClip(null, -1, [track]);
       const animationAction = temporalAnimation.mixer.clipAction(animationClip);
       animationAction.play();
-      temporalAnimation.clock = new Clock();
+      if(!mesh.userData.clock) mesh.userData.clock = new Clock();
       this.animationsObjects.push(mesh);
       temporalAnimation.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
@@ -908,7 +908,7 @@ class GameMap {
       ['animations', 'temporalAnimation'].forEach(animation => {
         if (mesh.userData?.[animation]) {
           mesh.userData[animation].mixer.update(
-            mesh.userData[animation].clock.getDelta()
+            mesh.userData.clock.getDelta()
           );
         }
       })

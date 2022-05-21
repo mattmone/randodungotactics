@@ -48,6 +48,7 @@ class ModelRenderer {
           const {animations} = gltf;
 
           const mixer = new AnimationMixer(gltf.scene);
+          gltf.scene.userData.clock = new Clock()
 
           const idleAction = mixer.clipAction(animations[0]);
           const walkAction = mixer.clipAction(animations[1]);
@@ -60,7 +61,6 @@ class ModelRenderer {
           idleAction.play();
           walkAction.play();
           gltf.scene.userData.animations = {};
-          gltf.scene.userData.animations.clock = new Clock()
           gltf.scene.userData.animations.mixer = mixer;
 
           resolve(gltf)
