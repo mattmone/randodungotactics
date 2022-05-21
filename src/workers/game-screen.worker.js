@@ -94,6 +94,11 @@ class GameMap {
    */
   animationsObjects = [];
 
+  /**
+   * @type {Mesh[]}
+   */
+  characterAnimations = [];
+
   interactible = [];
 
   /**
@@ -788,7 +793,8 @@ class GameMap {
     endPointVector,
   }) {
     return new Promise((resolve) => {
-      mesh.userData.mixer = new AnimationMixer(mesh);
+      mesh.userData.temporalAnimation = {};
+      mesh.userData.temporalAnimation.mixer = new AnimationMixer(mesh);
       if (!endPointVector)
         endPointVector = new Vector3(
           -endPosition.x,
@@ -807,17 +813,16 @@ class GameMap {
         ]
       );
       const animationClip = new AnimationClip(null, -1, [track]);
-      const animationAction = mesh.userData.mixer.clipAction(animationClip);
+      const animationAction = mesh.userData.temporalAnimation.mixer.clipAction(animationClip);
       animationAction.play();
-      mesh.userData.clock = new Clock();
+      mesh.userData.temporalAnimation.clock = new Clock();
       this.animationsObjects.push(mesh);
-      mesh.userData.mixer.addEventListener("loop", () => {
+      mesh.userData.temporalAnimation.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
           mesh.position.set(...endPointVector.toArray());
           resolve();
         });
-        delete mesh.userData.mixer;
-        delete mesh.userData.clock;
+        delete mesh.userData.temporalAnimation;
         this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
       });
     });
@@ -848,11 +853,12 @@ class GameMap {
         char !== character && positionEquals(char.position, character.position)
     );
     if (characterAtPosition) characterAtPosition.position = null;
-    character.avatar.mesh.position.y = placement.geometry.parameters.height * 0.5;
+    character.avatar.mesh.position.y =
+      placement.geometry.parameters.height * 0.5;
     placement.add(character.avatar.mesh);
     if (!enemy) this.placedCharacters.add(character);
-    if (character.avatar.mesh.userData.mixer)
-      this.animationsObjects.push(character.avatar.mesh);
+    if (character.avatar.mesh.userData.animations)
+      this.characterAnimations.push(character.avatar.mesh);
   }
 
   determineIntersectionObject() {
@@ -897,10 +903,14 @@ class GameMap {
   render() {
     if (this.focalPoint) this.focalPoint.rotation.y = this.rotation?.dx || 0;
     this.renderer.render(this.scene, this.camera);
-    this.animationsObjects.forEach((mesh) => {
-      if (mesh.userData.clock && mesh.userData.mixer) {
-        mesh.userData.mixer.update(mesh.userData.clock.getDelta());
-      }
+    [...this.characterAnimations, this.animationsObjects].forEach((mesh) => {
+      ['animations', 'temporalAnimation'].forEach(animation => {
+        if (mesh.userData[animation]) {
+          mesh.userData[animation].mixer.update(
+            mesh.userData[animation].clock.getDelta()
+          );
+        }
+      })
     });
     requestAnimationFrame((time) => this.render(time));
   }

@@ -59,8 +59,8 @@ class ModelRenderer {
           walkAction.setEffectiveWeight(0);
           idleAction.play();
           walkAction.play();
-          gltf.scene.userData.clock = new Clock()
-          gltf.scene.userData.mixer = mixer;
+          gltf.scene.userData.animations.clock = new Clock()
+          gltf.scene.userData.animations.mixer = mixer;
 
           resolve(gltf)
           console.log(gltf);
