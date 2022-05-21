@@ -66,6 +66,7 @@ class ModelRenderer {
     //   new MeshStandardMaterial({ color: color.hex }),
     // );
     model.userData.type = 'avatar';
+    model.scale.set(0.25, 0.25, 0.25);
     return this.render(model);
   }
 

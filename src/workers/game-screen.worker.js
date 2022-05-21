@@ -848,9 +848,7 @@ class GameMap {
         char !== character && positionEquals(char.position, character.position)
     );
     if (characterAtPosition) characterAtPosition.position = null;
-    // character.avatar.mesh.position.y =
-    //   character.avatar.mesh.geometry.parameters.height * 0.5 +
-    //   placement.geometry.parameters.height * 0.5;
+    character.avatar.mesh.position.y = placement.geometry.parameters.height * 0.5;
     placement.add(character.avatar.mesh);
     if (!enemy) this.placedCharacters.add(character);
   }
