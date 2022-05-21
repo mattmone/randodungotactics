@@ -7,7 +7,6 @@ import {
   BoxGeometry,
   MeshStandardMaterial,
   GLTFLoader,
-  DRACOLoader,
 } from "../../libs/three.module.js";
 
 class ModelRenderer {
@@ -32,9 +31,9 @@ class ModelRenderer {
 
   async renderAvatar({ color }) {
     const loader = new GLTFLoader();
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath("/examples/js/libs/draco/");
-    loader.setDRACOLoader(dracoLoader);
+    // const dracoLoader = new DRACOLoader();
+    // dracoLoader.setDecoderPath("/examples/js/libs/draco/");
+    // loader.setDRACOLoader(dracoLoader);
 
     const {scene: model} = await new Promise((resolve, reject) => {
       loader.load(
