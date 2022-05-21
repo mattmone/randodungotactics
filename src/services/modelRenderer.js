@@ -6,8 +6,10 @@ import {
   Mesh,
   BoxGeometry,
   MeshStandardMaterial,
-  GLTFLoader,
 } from "../../libs/three.module.js";
+import {
+  GLTFLoader
+} from "../../libs/GLTFLoader.js";
 
 class ModelRenderer {
   #canvas = new OffscreenCanvas(128, 128);
