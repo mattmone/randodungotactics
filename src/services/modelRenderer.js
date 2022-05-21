@@ -46,7 +46,7 @@ class ModelRenderer {
         function (gltf) {
           const {animations} = gltf;
 
-          const mixer = new AnimationMixer(model);
+          const mixer = new AnimationMixer(gltf.scene);
 
           const idleAction = mixer.clipAction(animations[0]);
           const walkAction = mixer.clipAction(animations[1]);
