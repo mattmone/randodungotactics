@@ -73,7 +73,7 @@ class GameScreen extends LitElement {
 
     const offscreen = canvas.transferControlToOffscreen();
     const GameMap = wrap(
-      new Worker('./src/workers/game-screen.worker.js', {
+      new Worker('./workers/game-screen.worker.js', {
         type: 'module',
       }),
     );
