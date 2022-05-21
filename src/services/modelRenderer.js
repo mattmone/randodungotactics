@@ -6,7 +6,8 @@ import {
   Mesh,
   BoxGeometry,
   MeshStandardMaterial,
-  AnimationMixer
+  AnimationMixer,
+  Clock
 } from "../../libs/three.module.js";
 import {
   GLTFLoader
