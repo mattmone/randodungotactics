@@ -64,7 +64,6 @@ class ModelRenderer {
           gltf.scene.userData.animations.mixer = mixer;
 
           resolve(gltf)
-          console.log(gltf);
           // gltf.animations; // Array<THREE.AnimationClip>
           // gltf.scene; // THREE.Group
           // gltf.scenes; // Array<THREE.Group>

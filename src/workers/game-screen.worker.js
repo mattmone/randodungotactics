@@ -793,8 +793,8 @@ class GameMap {
     endPointVector,
   }) {
     return new Promise((resolve) => {
-      mesh.userData.temporalAnimation = {};
-      mesh.userData.temporalAnimation.mixer = new AnimationMixer(mesh);
+      const temporalAnimation = {};
+      temporalAnimation.mixer = new AnimationMixer(mesh);
       if (!endPointVector)
         endPointVector = new Vector3(
           -endPosition.x,
@@ -813,11 +813,11 @@ class GameMap {
         ]
       );
       const animationClip = new AnimationClip(null, -1, [track]);
-      const animationAction = mesh.userData.temporalAnimation.mixer.clipAction(animationClip);
+      const animationAction = temporalAnimation.mixer.clipAction(animationClip);
       animationAction.play();
-      mesh.userData.temporalAnimation.clock = new Clock();
+      temporalAnimation.clock = new Clock();
       this.animationsObjects.push(mesh);
-      mesh.userData.temporalAnimation.mixer.addEventListener("loop", () => {
+      temporalAnimation.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
           mesh.position.set(...endPointVector.toArray());
           resolve();
@@ -825,6 +825,7 @@ class GameMap {
         delete mesh.userData.temporalAnimation;
         this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
       });
+      mesh.temporalAnimation = temporalAnimation;
     });
   }
 
