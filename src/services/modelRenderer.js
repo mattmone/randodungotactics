@@ -6,7 +6,9 @@ import {
   Mesh,
   BoxGeometry,
   MeshStandardMaterial,
-} from '../../libs/three.module.js';
+  GLTFLoader,
+  DRACOLoader,
+} from "../../libs/three.module.js";
 
 class ModelRenderer {
   #canvas = new OffscreenCanvas(128, 128);
@@ -29,10 +31,39 @@ class ModelRenderer {
   }
 
   async renderAvatar({ color }) {
-    const model = new Mesh(
-      new BoxGeometry(0.5, 1, 0.5),
-      new MeshStandardMaterial({ color: color.hex }),
-    );
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath("/examples/js/libs/draco/");
+    loader.setDRACOLoader(dracoLoader);
+
+    const {scene: model} = await new Promise((resolve, reject) => {
+      loader.load(
+        // resource URL
+        "../models/character.glb",
+        // called when the resource is loaded
+        function (gltf) {
+          resolve(gltf)
+          console.log(gltf);
+          // gltf.animations; // Array<THREE.AnimationClip>
+          // gltf.scene; // THREE.Group
+          // gltf.scenes; // Array<THREE.Group>
+          // gltf.cameras; // Array<THREE.Camera>
+          // gltf.asset; // Object
+        },
+        // called while loading is progressing
+        function (xhr) {
+          console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+        },
+        // called when loading has errors
+        function (error) {
+          console.log("An error happened", error);
+        }
+      );
+    });
+    // const model = new Mesh(
+    //   new BoxGeometry(0.5, 1, 0.5),
+    //   new MeshStandardMaterial({ color: color.hex }),
+    // );
     model.userData.type = 'avatar';
     return this.render(model);
   }
