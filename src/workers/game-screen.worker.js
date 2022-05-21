@@ -851,6 +851,7 @@ class GameMap {
     character.avatar.mesh.position.y = placement.geometry.parameters.height * 0.5;
     placement.add(character.avatar.mesh);
     if (!enemy) this.placedCharacters.add(character);
+    if(character.animations) this.animationsObjects.push(...character.animations);
   }
 
   determineIntersectionObject() {
