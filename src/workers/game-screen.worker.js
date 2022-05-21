@@ -905,7 +905,7 @@ class GameMap {
     this.renderer.render(this.scene, this.camera);
     [...this.characterAnimations, this.animationsObjects].forEach((mesh) => {
       ['animations', 'temporalAnimation'].forEach(animation => {
-        if (mesh.userData[animation]) {
+        if (mesh.userData?.[animation]) {
           mesh.userData[animation].mixer.update(
             mesh.userData[animation].clock.getDelta()
           );
