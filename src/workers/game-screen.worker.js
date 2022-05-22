@@ -643,6 +643,7 @@ class GameMap {
         startPosition: this.currentParticipant.avatar.mesh.position,
         endPosition,
         endPointVector,
+        moreSteps: path.length>1
       });
       this.currentParticipant.tile = endBlock;
     }
@@ -820,6 +821,7 @@ class GameMap {
     startPosition = this.map.position,
     endPosition,
     endPointVector,
+    moreSteps
   }) {
     return new Promise((resolve) => {
       const temporalAnimation = {
@@ -853,19 +855,15 @@ class GameMap {
         const endLookVector = copyVector(endPointVector);
         const lookVector = endLookVector.sub(copyVector(startPosition));
         lookVector.y = 0;
-        // console.table({mesh: mesh.position, lookVector, userData: this.currentParticipant.tile.userData});
         const lookingAt = new Vector3(0,0,0)
         mesh.getWorldDirection(lookingAt);
         lookingAt.applyQuaternion(new Quaternion(...this.focalPoint.quaternion.toArray()).invert());
         let angle = lookingAt.angleTo(lookVector.normalize());
         const orientation = lookingAt.x * lookVector.z - lookingAt.z * lookVector.x;
         if(orientation > 0) angle = 2*Math.PI - angle;
-        console.table({ lookVector, lookingAt, angle} );
         mesh.rotateY(angle);
         const afterRotate = new Vector3(0,0,0)
         mesh.getWorldDirection(afterRotate);
-        console.table({afterRotate})
-        // mesh.lookAt(lookVector)
         mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(0);
         mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(1);
       }
@@ -875,7 +873,7 @@ class GameMap {
           resolve();
         });
         delete mesh.userData.temporalAnimation;
-        if(mesh.userData.animationsMixer?.actions?.walk) {
+        if(mesh.userData.animationsMixer?.actions?.walk && !moreSteps) {
           mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(1);
           mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(0);
         }
