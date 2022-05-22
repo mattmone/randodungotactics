@@ -869,7 +869,14 @@ class GameMap {
         const afterRotate = new Vector3(0,0,0)
         mesh.getWorldDirection(afterRotate);
         mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(0);
-        mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(1);
+        const heightDistance = Math.max(endPointVector.y, startPosition.y) - Math.min(endPointVector.y, startPosition.y);
+        if(heightDistance < 0.33) {
+          mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(1);
+          mesh.userData.animationsMixer.actions.jump.setEffectiveWeight(0);
+        } else {
+          mesh.userData.animationsMixer.actions.jump.setEffectiveWeight(1);
+          mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(0);
+        }
       }
       temporalAnimation.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
@@ -880,6 +887,7 @@ class GameMap {
         if(mesh.userData.animationsMixer?.actions?.walk && !moreSteps) {
           mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(1);
           mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(0);
+          mesh.userData.animationsMixer.actions.jump.setEffectiveWeight(0);
         }
         this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
       });
