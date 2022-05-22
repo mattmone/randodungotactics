@@ -34,6 +34,11 @@ const characters = new Crew();
 const enemies = new Crew("enemy");
 if (enemies.members.length > 0) enemies.disband();
 enemies.random({ quantity: 5, level: 2, withEquipment: true });
+
+const enemyPosition = (tile) => {
+  return enemies.members.some(enemy => enemy.tile === tile);
+}
+
 const positionEquals = (position1, position2) => {
   return position1?.x === position2?.x && position1?.z === position2?.z;
 };
@@ -559,11 +564,11 @@ class GameMap {
         const nextTile = this.map.children.find((tile) =>
           positionEquals(tile.position, nextTilePosition)
         );
-        if (!nextTile || tiles.has(nextTile) || nextTile.userData.tree) continue;
-        const tileParticipant = this.participants.find(
+        if (!nextTile || tiles.has(nextTile) || nextTile.userData.tree || enemyPosition(nextTile)) continue;
+        const tileParticipant = Array.from(this.placedCharacters).find(
           (participant) => nextTile === participant.tile
         );
-        if (!nextTile.userData.tree && !tileParticipant) {
+        if (!tileParticipant) {
           tiles.add(nextTile);
         }
         let elevationChange =
@@ -584,7 +589,6 @@ class GameMap {
         } else { path.add(nextTile); break;}
       }
     }
-    console.log(paths);
     return [tiles, paths];
   }
 
@@ -834,7 +838,7 @@ class GameMap {
           startPosition.y,
           -endPosition.z
         );
-      const animationTiming = mesh.userData.animationsMixer?.actions?.walk ? startPosition.distanceTo(endPointVector) : 0.3;
+      const animationTiming = mesh.userData.animationsMixer?.actions?.walk ? startPosition.distanceTo(endPointVector)/2 : 0.3;
       const track = new VectorKeyframeTrack(
         ".position",
         [0, animationTiming],
