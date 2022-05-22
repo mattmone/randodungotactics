@@ -48,20 +48,24 @@ class ModelRenderer {
           const {animations} = gltf;
 
           const mixer = new AnimationMixer(gltf.scene);
-          gltf.scene.userData.clock = new Clock()
 
-          const idleAction = mixer.clipAction(animations[0]);
-          const walkAction = mixer.clipAction(animations[1]);
-          idleAction.enabled = true;
-          idleAction.setEffectiveTimeScale(1);
-          idleAction.setEffectiveWeight(1);
-          walkAction.enabled = true;
-          walkAction.setEffectiveTimeScale(1);
-          walkAction.setEffectiveWeight(0);
-          idleAction.play();
-          walkAction.play();
-          gltf.scene.userData.animations = {};
-          gltf.scene.userData.animations.mixer = mixer;
+          const actions = {
+            "idle": mixer.clipAction(animations[0]),
+            "jump": mixer.clipAction(animations[1]),
+            "walk": mixer.clipAction(animations[2])
+          }
+          Object.values(actions).forEach(action => {
+            action.enabled = true;
+            action.setEffectiveTimeScale(1);
+            action.setEffectiveWeight(0);
+            action.play();
+          });
+          actions.idle.setEffectiveWeight(1);
+          gltf.scene.userData.animationsMixer = {
+            mixer,
+            actions,
+            clock: new Clock()
+          };
 
           resolve(gltf)
           // gltf.animations; // Array<THREE.AnimationClip>

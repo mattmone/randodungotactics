@@ -19,6 +19,7 @@ import {
   AnimationClip,
   Clock,
   Object3D,
+  Quaternion
 } from "../../libs/three.module.js";
 
 import { makeMap } from "../utils/makeMap.js";
@@ -44,6 +45,10 @@ const sameTeam = (char1, char2) => {
     (enemies.members.includes(char1) && enemies.members.includes(char2))
   );
 };
+
+const copyVector = (vector) => {
+  return new Vector3(...vector.toArray());
+}
 
 function turnSort(participant1, participant2) {
   let sort = 0;
@@ -463,7 +468,8 @@ class GameMap {
       return Array.from(new Set(tiles));
     },
     move: async (range) => {
-      const tiles = await this.walkItOut(this.currentParticipant.tile, range);
+      const [tiles, paths] = await this.walkItOut(this.currentParticipant.tile, range);
+      this.movePaths = paths;
       return Array.from(new Set(tiles));
     },
   };
@@ -536,10 +542,14 @@ class GameMap {
   }
 
   async walkItOut(startingTile, range) {
-    const tiles = [];
-    const tileQueue = [[startingTile, range]];
+    const tiles = new Set();
+    const paths = new Set();
+    const tileQueue = [[startingTile, range, new Set()]];
     while (tileQueue.length) {
-      const [currentTile, remainingRange] = tileQueue.shift();
+      let [currentTile, remainingRange, path] = tileQueue.shift();
+      let pathed = true;
+      if(!paths.has(path)) paths.add(path);
+      path.add(currentTile);
       for (let direction = 0; direction < 4; direction++) {
         const nextTilePosition = { ...currentTile.position };
         if (direction === 0) nextTilePosition.z += 1;
@@ -549,11 +559,13 @@ class GameMap {
         const nextTile = this.map.children.find((tile) =>
           positionEquals(tile.position, nextTilePosition)
         );
-        if (!nextTile || tiles.includes(nextTile)) continue;
+        if (!nextTile || tiles.has(nextTile) || nextTile.userData.tree) continue;
         const tileParticipant = this.participants.find(
           (participant) => nextTile === participant.tile
         );
-        if (!nextTile.userData.tree && !tileParticipant) tiles.push(nextTile);
+        if (!nextTile.userData.tree && !tileParticipant) {
+          tiles.add(nextTile);
+        }
         let elevationChange =
           nextTile.userData.elevation - currentTile.userData.elevation;
         if (elevationChange < 0)
@@ -566,11 +578,14 @@ class GameMap {
         if (nextTile.userData.texture === "snow") modifier += 0.4;
         const rangeDelta = Math.max(1 + elevationChange + modifier, 0.2);
         const newRemainingRange = remainingRange - rangeDelta;
-        if (newRemainingRange > 0)
-          tileQueue.push([nextTile, newRemainingRange]);
+        if (newRemainingRange > 0){
+          tileQueue.push([nextTile, newRemainingRange, pathed ? path : new Set(path)]);
+          pathed = false;
+        } else { path.add(nextTile); break;}
       }
     }
-    return tiles;
+    console.log(paths);
+    return [tiles, paths];
   }
 
   async markInteractibles(range, action) {
@@ -597,26 +612,40 @@ class GameMap {
   }
 
   async move(position) {
-    const startBlock = this.currentParticipant.tile;
-    const endBlock = this.intersectedObject.parent;
-    const startPosition = startBlock.position;
-    const endPosition = endBlock.position;
-    const endPointVector = new Vector3(
-      this.currentParticipant.avatar.mesh.position.x +
-        (endPosition.x - startPosition.x),
-      this.currentParticipant.avatar.mesh.position.y +
-        (endBlock.userData.elevation - startBlock.userData.elevation) +
-        (endBlock.userData?.rock ? 1 : 0) -
-        (startBlock.userData?.rock ? 1 : 0),
-      this.currentParticipant.avatar.mesh.position.z +
-        (endPosition.z - startPosition.z)
-    );
-    await this.createMoveAnimation({
-      mesh: this.currentParticipant.avatar.mesh,
-      startPosition: this.currentParticipant.avatar.mesh.position,
-      endPointVector,
+    const possiblePaths = Array.from(this.movePaths).filter(setPath => {
+      const path = Array.from(setPath);
+      return path.includes(this.intersectedObject.parent);
     });
-    this.currentParticipant.tile = endBlock;
+    const fullPath = Array.from(possiblePaths.find(path => path.size === Math.min(...possiblePaths.map(path => path.size))));
+    const path = fullPath.reduce((acc, current) => {
+      console.log(acc);
+      if(acc[acc.length-1] === this.intersectedObject.parent) return acc;
+      acc.push(current); 
+      return acc;
+    }, []);
+    while(path.length>1) {
+      const startBlock = path.shift();
+      const endBlock = path[0];
+      const startPosition = startBlock.position;
+      const endPosition = endBlock.position;
+      const endPointVector = new Vector3(
+        this.currentParticipant.avatar.mesh.position.x +
+          (endPosition.x - startPosition.x),
+        this.currentParticipant.avatar.mesh.position.y +
+          (endBlock.userData.elevation - startBlock.userData.elevation) +
+          (endBlock.userData?.rock ? 1 : 0) -
+          (startBlock.userData?.rock ? 1 : 0),
+        this.currentParticipant.avatar.mesh.position.z +
+          (endPosition.z - startPosition.z)
+      );
+      await this.createMoveAnimation({
+        mesh: this.currentParticipant.avatar.mesh,
+        startPosition: this.currentParticipant.avatar.mesh.position,
+        endPosition,
+        endPointVector,
+      });
+      this.currentParticipant.tile = endBlock;
+    }
     this.focus();
     this.clearInteractible();
     this.phase = "";
@@ -793,15 +822,17 @@ class GameMap {
     endPointVector,
   }) {
     return new Promise((resolve) => {
-      const temporalAnimation = {};
-      temporalAnimation.mixer = new AnimationMixer(mesh);
+      const temporalAnimation = {
+        mixer: new AnimationMixer(mesh),
+        clock: new Clock()
+      }
       if (!endPointVector)
         endPointVector = new Vector3(
           -endPosition.x,
           startPosition.y,
           -endPosition.z
         );
-      const animationTiming = 0.3;
+      const animationTiming = mesh.userData.animationsMixer?.actions?.walk ? startPosition.distanceTo(endPointVector) : 0.3;
       const track = new VectorKeyframeTrack(
         ".position",
         [0, animationTiming],
@@ -816,16 +847,40 @@ class GameMap {
       const animationAction = temporalAnimation.mixer.clipAction(animationClip);
       animationAction.play();
       if(!mesh.userData.clock) mesh.userData.clock = new Clock();
+      mesh.userData.temporalAnimation = temporalAnimation;
       this.animationsObjects.push(mesh);
+      if(mesh.userData.animationsMixer?.actions?.walk) {
+        const endLookVector = copyVector(endPointVector);
+        const lookVector = endLookVector.sub(copyVector(startPosition));
+        lookVector.y = 0;
+        // console.table({mesh: mesh.position, lookVector, userData: this.currentParticipant.tile.userData});
+        const lookingAt = new Vector3(0,0,0)
+        mesh.getWorldDirection(lookingAt);
+        lookingAt.applyQuaternion(new Quaternion(...this.focalPoint.quaternion.toArray()).invert());
+        let angle = lookingAt.angleTo(lookVector.normalize());
+        const orientation = lookingAt.x * lookVector.z - lookingAt.z * lookVector.x;
+        if(orientation > 0) angle = 2*Math.PI - angle;
+        console.table({ lookVector, lookingAt, angle} );
+        mesh.rotateY(angle);
+        const afterRotate = new Vector3(0,0,0)
+        mesh.getWorldDirection(afterRotate);
+        console.table({afterRotate})
+        // mesh.lookAt(lookVector)
+        mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(0);
+        mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(1);
+      }
       temporalAnimation.mixer.addEventListener("loop", () => {
         requestAnimationFrame(() => {
           mesh.position.set(...endPointVector.toArray());
           resolve();
         });
         delete mesh.userData.temporalAnimation;
+        if(mesh.userData.animationsMixer?.actions?.walk) {
+          mesh.userData.animationsMixer.actions.idle.setEffectiveWeight(1);
+          mesh.userData.animationsMixer.actions.walk.setEffectiveWeight(0);
+        }
         this.animationsObjects.splice(this.animationsObjects.indexOf(mesh), 1);
       });
-      mesh.temporalAnimation = temporalAnimation;
     });
   }
 
@@ -858,7 +913,7 @@ class GameMap {
       placement.geometry.parameters.height * 0.5;
     placement.add(character.avatar.mesh);
     if (!enemy) this.placedCharacters.add(character);
-    if (character.avatar.mesh.userData.animations)
+    if (character.avatar.mesh.userData.animationsMixer)
       this.characterAnimations.push(character.avatar.mesh);
   }
 
@@ -904,11 +959,11 @@ class GameMap {
   render() {
     if (this.focalPoint) this.focalPoint.rotation.y = this.rotation?.dx || 0;
     this.renderer.render(this.scene, this.camera);
-    [...this.characterAnimations, this.animationsObjects].forEach((mesh) => {
-      ['animations', 'temporalAnimation'].forEach(animation => {
+    [...this.characterAnimations, ...this.animationsObjects].forEach((mesh) => {
+      ['animationsMixer', 'temporalAnimation'].forEach(animation => {
         if (mesh.userData?.[animation]) {
           mesh.userData[animation].mixer.update(
-            mesh.userData.clock.getDelta()
+            mesh.userData[animation].clock.getDelta()
           );
         }
       })

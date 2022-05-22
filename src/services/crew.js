@@ -203,7 +203,8 @@ export class Crew {
     this.#saveCrew();
   }
 
-  async random({ quantity = 1, level = 1, withEquipment = false }) {
+  async random(params = {}) {
+    const { quantity = 1, level = 1, withEquipment = false } = params;
     const distributePoints = (points, possibilities, max = 10, favored) => {
       while (points > 0) {
         const choices = Array.from(points % 2 === 0 && favored ? favored : possibilities.keys());
