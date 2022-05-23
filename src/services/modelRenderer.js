@@ -12,6 +12,9 @@ import {
 import {
   GLTFLoader
 } from "../../libs/GLTFLoader.js";
+// import {
+//   DRACOLoader
+// } from "../../libs/DRACOLoader.js";
 
 class ModelRenderer {
   #canvas = new OffscreenCanvas(128, 128);
@@ -36,24 +39,25 @@ class ModelRenderer {
   async renderAvatar({ color }) {
     const loader = new GLTFLoader();
     // const dracoLoader = new DRACOLoader();
-    // dracoLoader.setDecoderPath("/examples/js/libs/draco/");
+    // dracoLoader.setDecoderPath("/libs/draco/gltf/");
     // loader.setDRACOLoader(dracoLoader);
 
     const {scene: model} = await new Promise((resolve, reject) => {
       loader.load(
         // resource URL
-        "../models/character.glb",
+        "../models/vox-character.glb",
         // called when the resource is loaded
         function (gltf) {
           const {animations} = gltf;
 
           const mixer = new AnimationMixer(gltf.scene);
 
-          const actions = {
-            "idle": mixer.clipAction(animations[0]),
-            "jump": mixer.clipAction(animations[1]),
-            "walk": mixer.clipAction(animations[2])
-          }
+          
+          const actions = Object.fromEntries(animations.map(animationClip => {
+            return [animationClip.name, mixer.clipAction(animationClip)]
+          }));
+          console.log(actions);
+          
           Object.values(actions).forEach(action => {
             action.enabled = true;
             action.setEffectiveTimeScale(1);
@@ -89,7 +93,8 @@ class ModelRenderer {
     //   new MeshStandardMaterial({ color: color.hex }),
     // );
     model.userData.type = 'avatar';
-    model.scale.set(0.25, 0.25, 0.25);
+    const scale = 0.03;
+    model.scale.set(scale, scale, scale);
     return this.render(model);
   }
 
