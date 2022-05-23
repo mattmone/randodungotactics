@@ -392,8 +392,8 @@ export class Character {
   }
 
   async die() {
-    const { deathAnimation } = await import('./animations/character-death.js');
-    deathAnimation.call(this);
+    console.log('died');
+    return;
   }
 
   progressSkill(skillUsed) {
