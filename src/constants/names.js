@@ -77,6 +77,7 @@ export const names = [
   'Nova',
   'Isaac',
   'Hannah',
+  'Nathan',
   'Lincoln',
   'Emilia',
   'Anthony',

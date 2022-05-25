@@ -24,7 +24,7 @@ class CrewContent extends LitElement {
         }
         #crew {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(var(--character-selector-width), 1fr));
           padding: 8px;
           gap: 8px;
           max-height: 100%;

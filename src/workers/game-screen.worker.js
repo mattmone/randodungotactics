@@ -28,6 +28,7 @@ import { rollDice } from "../utils/rollDice.js";
 import { oneOf } from "../utils/oneOf.js";
 import { Character } from "../character.js";
 import { Crew } from "../services/crew.js";
+import { initScene } from "../utils/initScene.js";
 
 const characters = new Crew();
 
@@ -120,37 +121,21 @@ class GameMap {
      * @type {Canvas}
      */
     this.canvas = canvas;
-    this.scene = new Scene();
-    this.scene.position.y = -1;
-    /**
-     * @type {Number}
-     */
-    this.aspect = canvas.width / canvas.height;
-    const d = 70;
-    this.camera = new OrthographicCamera(
-      -d * this.aspect,
-      d * this.aspect,
-      d,
-      -d,
-      1,
-      1000
-    );
-
-    this.ambientLight = new AmbientLight(0xffffff, 0.8);
-
-    this.directionalLight = new DirectionalLight(0xffffff, 1);
-    this.directionalLight.position.set(0, 15, 0);
+    ({
+      scene: this.scene,
+      camera: this.camera,
+      renderer: this.renderer,
+      aspect: this.aspect,
+      directionalLight: this.directionalLight,
+      ambientLight: this.ambientLight
+    } = initScene(canvas));
 
     this.raycaster = new Raycaster();
     this.mousePosition = new Vector2();
 
-    this.scene.add(this.ambientLight);
-    this.scene.add(this.directionalLight);
     this.focalPoint = new Object3D();
     this.scene.add(this.focalPoint);
 
-    this.renderer = new WebGLRenderer({ canvas });
-    this.renderer.setSize(canvas.width, canvas.height, false);
     this.render();
     return this;
   }
@@ -622,7 +607,6 @@ class GameMap {
     });
     const fullPath = Array.from(possiblePaths.find(path => path.size === Math.min(...possiblePaths.map(path => path.size))));
     const path = fullPath.reduce((acc, current) => {
-      console.log(acc);
       if(acc[acc.length-1] === this.intersectedObject.parent) return acc;
       acc.push(current); 
       return acc;

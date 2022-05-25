@@ -1,13 +1,7 @@
 import {
-  Scene,
-  OrthographicCamera,
-  WebGLRenderer,
-  DirectionalLight,
-  Mesh,
-  BoxGeometry,
-  MeshStandardMaterial,
   AnimationMixer,
-  Clock
+  Clock,
+  Object3D
 } from "../../libs/three.module.js";
 import {
   GLTFLoader
@@ -15,28 +9,31 @@ import {
 // import {
 //   DRACOLoader
 // } from "../../libs/DRACOLoader.js";
+import { initScene } from "../../utils/initScene.js";
 
 class ModelRenderer {
-  #canvas = new OffscreenCanvas(128, 128);
-  #scene = new Scene();
-  #camera = new OrthographicCamera(-1, 1, 1, -1, 1, 10);
-  #renderer = new WebGLRenderer({ antialias: true, canvas: this.#canvas, alpha: true });
-  #light = new DirectionalLight(0xffffff, 1);
+  #canvas = new OffscreenCanvas(256, 256);
+  #scene;
+  #camera;
+  #renderer;
   #processing = [];
 
   constructor() {
-    this.#camera.position.set(1, 1, 1);
-    this.#camera.lookAt(0, 0, 0);
+    ({
+      scene: this.#scene,
+      camera: this.#camera,
+      renderer: this.#renderer,
+    } = initScene(this.#canvas, {alpha: true}));
     this.#camera.updateProjectionMatrix();
-
-    this.#light.position.set(2, 2, 2);
-    this.#scene.add(this.#light);
-
-    this.#renderer.setClearColor(0x000000, 0);
-    this.#renderer.setSize(this.#canvas.width, this.#canvas.height, false);
   }
 
-  async renderAvatar({ color }) {
+  /**
+   * 
+   * @param {Object} AvatarRenderParams
+   * @param {import("../character.js").AvatarColorOffset} AvatarRenderParams.colorOffset 
+   * @returns 
+   */
+  async renderAvatar({ colorOffset = {} }) {
     const loader = new GLTFLoader();
     // const dracoLoader = new DRACOLoader();
     // dracoLoader.setDecoderPath("/libs/draco/gltf/");
@@ -48,6 +45,20 @@ class ModelRenderer {
         "../models/vox-character.glb",
         // called when the resource is loaded
         function (gltf) {
+          gltf.scene.traverse( ( object ) => {
+
+            if ( object.isMesh ) {
+              Object.keys(colorOffset).forEach(key => {
+                if(object.material.name.includes(key) || key === 'hands' && object.material.name.includes('ring')) {
+                  const { h, s, l } = colorOffset[key]
+                  if(colorOffset[key].set) object.material.color.setHSL(h,s,l);
+                  else object.material.color.offsetHSL(h,s,l);
+                }
+              });
+            }
+          
+          } );
+
           const {animations} = gltf;
 
           const mixer = new AnimationMixer(gltf.scene);
@@ -56,7 +67,6 @@ class ModelRenderer {
           const actions = Object.fromEntries(animations.map(animationClip => {
             return [animationClip.name, mixer.clipAction(animationClip)]
           }));
-          console.log(actions);
           
           Object.values(actions).forEach(action => {
             action.enabled = true;
@@ -84,10 +94,12 @@ class ModelRenderer {
         },
         // called when loading has errors
         function (error) {
+          reject(error);
           console.log("An error happened", error);
         }
       );
     });
+    
     // const model = new Mesh(
     //   new BoxGeometry(0.5, 1, 0.5),
     //   new MeshStandardMaterial({ color: color.hex }),
@@ -102,12 +114,19 @@ class ModelRenderer {
     const processing = [...this.#processing];
     const promise = new Promise(async resolve => {
       await Promise.allSettled(processing);
+      model.position.y = -60;
+      const scale = 4;
+      const priorScale = model.scale.toArray();
+      const priorPosition = model.position.toArray();
+      model.scale.set(scale,scale,scale);
       this.#scene.add(model);
       this.#renderer.render(this.#scene, this.#camera);
       const imageBlob = await this.#canvas.convertToBlob();
       const image = URL.createObjectURL(imageBlob);
       resolve({ model, image });
       this.#scene.remove(model);
+      model.scale.set(...priorScale);
+      model.position.set(...priorPosition);
       this.#processing.shift();
     });
     this.#processing.push(promise);

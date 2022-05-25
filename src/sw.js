@@ -18,6 +18,7 @@ const precacheManifest = [
     revision: "1"
   }
 ];
+const sessionCache = new Set();
 const entryToUrl = ({ url, revision }) =>
   new URL(`${location.origin}/${url}?v=${revision}`).toString();
 const precacheManifold = Object.fromEntries(
@@ -28,14 +29,12 @@ const precacheManifold = Object.fromEntries(
 );
 
 self.addEventListener("install", (event) => {
-  console.log("installing");
   event.waitUntil(
     (async () => {
       const cache = await caches.open(PRECACHE);
       return Promise.all(
         precacheManifest.map((entry) => cache.add(entryToUrl(entry)))
       ).then(() => {
-        console.log("done install");
         self.skipWaiting();
       });
     })()
@@ -60,11 +59,9 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
     let requestUrl = event.request.url;
-    console.log("fetch request", requestUrl);
     if (requestUrl === `${location.origin}/`)
     requestUrl = new URL(`${location.origin}/index.html`).toString();
     if (Object.keys(precacheManifold).includes(requestUrl)) {
-    console.log("precache response");
     return event.respondWith(
         (async () => {
         const cache = await caches.open(PRECACHE);
@@ -75,19 +72,25 @@ self.addEventListener("fetch", (event) => {
         })()
     );
     }
-    console.log("cache check", requestUrl);
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE);
         const match = await cache.match(requestUrl);
+        // if(sessionCache.has(requestUrl)) return match;
+
+        const headers = {};
         if (match) {
-          console.log("match found, cache response", match);
-          return match;
+          headers['If-none-match'] = match.headers.get('etag');
         }
 
-        const response = await fetch(requestUrl);
-        // cache.put(requestUrl, response.clone());
-        console.log("match not found, skipping caching -> network response", requestUrl);
+        const response = await fetch(requestUrl, {
+          headers: {...event.request.headers, ...headers},
+        });
+        if(response.status === 304) return match;
+        else if(response.status === 200) {
+          sessionCache.add(requestUrl);
+          cache.put(requestUrl, response.clone());
+        }
         return response;
       })()
     );

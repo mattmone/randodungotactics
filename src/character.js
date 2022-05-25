@@ -8,11 +8,26 @@
  * @property {Number} magic
  *
  * @typedef {Object} Skills
+ * 
+ * @typedef {Object} AvatarColorOffset
+ * @property {HSLColor} [eyes] the color of the eyes
+ * @property {HSLColor} [pupils] the color of the eyes
+ * @property {HSLColor} [eyebrows] the color of the eyebrows
+ * @property {HSLColor} [body] the color offset of the body
+ * @property {HSLColor} [boots] the color offset of the body
+ * @property {HSLColor} [hands] the color offset of the body
+ * @property {HSLColor} [hair] the color offset of the hair
  *
+ * @typedef {Object} HSLColor
+ * @property {Boolean} [set] whether the color is set(true) or offset(falsey)
+ * @property {Number} h between 0 and 1
+ * @property {Number} s between 0 and 1
+ * @property {Number} l between 0 and 1
+ * 
  * @typedef {Object} CharacterOptions
  * @property {String} [id]
  * @property {String} name
- * @property {String} color
+ * @property {AvatarColorOffset} colorOffset
  * @property {Stats} [stats]
  * @property {Skills} [skills]
  * @property {Position} [position]
@@ -46,12 +61,13 @@ function rebuild(key, value) {
     Head: Head,
     Boots: Boots,
   };
+  console.log(key, value);
   return new type[key](value);
 }
 export class Character {
   #saveTimeout = null;
   #name;
-  #color;
+  #colorOffset;
   #stats;
   #skills;
   #position;
@@ -70,7 +86,7 @@ export class Character {
   constructor({
     id,
     name = '',
-    color = { name: 'red', hex: '#ff0000' },
+    colorOffset = {},
     stats = new Map([
       ['strength', { level: 1, progression: 1 }],
       ['dexterity', { level: 1, progression: 1 }],
@@ -93,7 +109,7 @@ export class Character {
     this.#initialize({
       id,
       name,
-      color,
+      colorOffset,
       stats,
       skills,
       position,
@@ -108,7 +124,7 @@ export class Character {
     return {
       id: this.id,
       name: this.name,
-      color: this.avatar.serialized,
+      colorOffset: this.avatar.serialized,
       stats: this.stats,
       skills: this.skills,
       position: this.position,
@@ -130,7 +146,7 @@ export class Character {
   #initialize({
     id,
     name,
-    color,
+    colorOffset,
     stats,
     skills,
     position,
@@ -144,7 +160,7 @@ export class Character {
   }) {
     this.id = id;
     this.name = name;
-    this.avatar = new Avatar({ color });
+    this.avatar = new Avatar({ colorOffset });
     /** @type {Stats} */
     this.stats = stats;
     this.skills = skills;
@@ -182,11 +198,11 @@ export class Character {
     this.#name = name;
     this.#saveCharacter();
   }
-  get color() {
-    return this.#color;
+  get colorOffset() {
+    return this.#colorOffset;
   }
-  set color(color) {
-    this.#color = color;
+  set colorOffset(colorOffset) {
+    this.#colorOffset = colorOffset;
     this.#saveCharacter();
   }
   get stats() {
