@@ -50,6 +50,7 @@ import { Boots } from './items/Boots.js';
 
 import { skillModifier } from './utils/skillModifier.js';
 import { statModifier } from './utils/statModifier.js';
+import { LoopOnce } from './libs/three.module.js';
 
 const idbStore = createStore('characters', 'characterStore');
 
@@ -61,7 +62,6 @@ function rebuild(key, value) {
     Head: Head,
     Boots: Boots,
   };
-  console.log(key, value);
   return new type[key](value);
 }
 export class Character {
@@ -409,6 +409,7 @@ export class Character {
 
   async die() {
     console.log('died');
+    this.avatar.swapAnimation('die', {clamp: true, loop: LoopOnce});
     return;
   }
 

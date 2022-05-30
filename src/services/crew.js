@@ -123,17 +123,17 @@ export class Crew {
           boots: {
 						h: Math.random() ,
 						s: -0.5 + Math.random() * 0.3,
-						l: -0.4 + Math.random() * 0.7,
+						l: -0.6 + Math.random() * 1.2,
 					},
           body: {
 						h: Math.random() ,
 						s: -0.5 + Math.random() * 0.3,
-						l: -0.4 + Math.random() * 0.7,
+						l: -0.6 + Math.random() * 1.2,
 					},
           hands: {
 						h: Math.random() ,
 						s: -0.5 + Math.random() * 0.3,
-						l: -0.4 + Math.random() * 0.7,
+						l: -0.6 + Math.random() * 1.2,
 					},
 				};
 				console.log("crew", characterOptions.colorOffset);

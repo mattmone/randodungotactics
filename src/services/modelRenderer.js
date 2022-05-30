@@ -75,7 +75,7 @@ class ModelRenderer {
             action.play();
           });
           actions.idle.setEffectiveWeight(1);
-          gltf.scene.userData.animationsMixer = {
+          gltf.scene.userData.animations = {
             mixer,
             actions,
             clock: new Clock()

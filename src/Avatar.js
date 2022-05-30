@@ -2,6 +2,7 @@ export class Avatar {
   #colorOffset = {};
   #placeholder = '';
   #image = '';
+  #currentAnimation = 'idle';
 
   constructor({ colorOffset = {}, placeholder = '', image = '' }) {
     this.#colorOffset = colorOffset;
@@ -32,5 +33,37 @@ export class Avatar {
         }
       }, 25);
     });
+  }
+
+  swapAnimation(newAnimation, options = {}) {
+    if (this.#currentAnimation === newAnimation) return;
+    this.mesh.userData.animations.actions[newAnimation].clampWhenFinished = options.clamp;
+    this.mesh.userData.animations.actions[newAnimation]
+      .reset()
+      .setLoop(options.loop)
+			.setEffectiveWeight(1)
+			.crossFadeFrom(this.mesh.userData.animations.actions[this.#currentAnimation], options.duration ?? 0.4, true)
+			.play();
+    this.#currentAnimation = newAnimation;
+    const finishPromise = new Promise(resolve => {
+      this.mesh.userData.animations.mixer.addEventListener(
+        "finished",
+        (event) => {
+          console.log('finished');
+          if(options.onFinish) options.onFinish();
+          resolve(this);
+        },
+        { once: true }
+      );
+    });
+    if(!options.await) return this;
+    if(options.await === 'finish')
+      return finishPromise;
+    else return new Promise(async resolve => {
+      const {duration} = this.mesh.userData.animations.actions[newAnimation].getClip();
+      setTimeout(() => {
+        resolve(this);
+      }, duration*500);
+    })
   }
 }
