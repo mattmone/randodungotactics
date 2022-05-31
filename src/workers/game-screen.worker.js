@@ -1,15 +1,10 @@
 import { expose } from "../../libs/comlink.min.js";
 import {
-	Scene,
-	OrthographicCamera,
-	WebGLRenderer,
 	BoxGeometry,
 	MeshStandardMaterial,
 	MeshBasicMaterial,
 	Mesh,
 	Group,
-	DirectionalLight,
-	AmbientLight,
 	Vector2,
 	Vector3,
 	CanvasTexture,
@@ -21,7 +16,6 @@ import {
 	Object3D,
 	Quaternion,
 	LoopOnce,
-	LoopRepeat,
 } from "../../libs/three.module.js";
 
 import { makeMap } from "../utils/makeMap.js";
@@ -172,7 +166,7 @@ class GameMap {
 	generateMap({ type = "largeRoad", width = 24, height = 12 }) {
 		const map = makeMap({ type, width, height });
 		this.maps.push(map);
-		const mapName = `map-${Math.floor(Math.random() * 100000)}`;
+		const mapName = `map-${crypto.randomUUID()}`;
 		this.renderMap(map, { characterPlacement: true, mapName });
 		this.renderMap(map, { mapName });
 		return map;
@@ -677,7 +671,7 @@ class GameMap {
 			victim.avatar.mesh.userData.childOf.position
 		);
 
-    await this.currentParticipant.avatar.swapAnimation('punch', {clamp: true, loop: LoopOnce, await: true, onFinish: () => {
+    await this.currentParticipant.avatar.swapAnimation('punch', {clamp: true, loop: LoopOnce, await: 0.5, onFinish: () => {
       this.currentParticipant.avatar.swapAnimation('idle');
     }});
 
@@ -950,6 +944,10 @@ class GameMap {
 		character.tile = placement;
 		character.placed = true;
 		character.position = { ...placement.position };
+    
+    if(character.position.z > 0) {
+      character.avatar.mesh.setRotationFromAxisAngle(new Vector3(0,1,0), Math.PI);
+    }
 		const characterAtPosition = characters.members.find(
 			(char) =>
 				char !== character && positionEquals(char.position, character.position)

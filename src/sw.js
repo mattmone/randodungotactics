@@ -2,6 +2,9 @@ const PRECACHE = "precache";
 const CACHE = "cache";
 const precacheManifest = [
   {
+    url: "./libs/lit.js",
+    revision: "1"
+  },{
     url: "./libs/comlink.min.js",
     revision: "1"
   },{
@@ -20,7 +23,7 @@ const precacheManifest = [
 ];
 const sessionCache = new Set();
 const entryToUrl = ({ url, revision }) =>
-  new URL(`${location.origin}/${url}?v=${revision}`).toString();
+  url.includes('https') ? url : new URL(`${location.origin}/${url}?v=${revision}`).toString();
 const precacheManifold = Object.fromEntries(
   precacheManifest.map((entry) => [
     new URL(`${location.origin}/${entry.url}`).toString(),

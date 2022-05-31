@@ -35,6 +35,12 @@ export class Avatar {
     });
   }
 
+  /**
+   * swap the avatar's current animation with another named animation
+   * @param {string} newAnimation the name of the animation action to play
+   * @param {SwapAnimationOptions} options the options for the animation swap
+   * @returns {Avatar} this
+   */
   swapAnimation(newAnimation, options = {}) {
     if (this.#currentAnimation === newAnimation) return;
     this.mesh.userData.animations.actions[newAnimation].clampWhenFinished = options.clamp;
@@ -63,7 +69,16 @@ export class Avatar {
       const {duration} = this.mesh.userData.animations.actions[newAnimation].getClip();
       setTimeout(() => {
         resolve(this);
-      }, duration*500);
+      }, duration*1000*options.await);
     })
   }
 }
+
+/**
+ * @typedef {Object} SwapAnimationOptions
+ * @property {number} [duration=0.4] the duration of the animation swap crossfade
+ * @property {LoopRepeat|LoopOnce} [loop=LoopRepeat] whether the animation should loop LoopOnce or LoopRepeat
+ * @property {boolean} [clamp=false] whether the animation should clamp when finished (pause on last frame)
+ * @property {number|string} [await] the percentage of the new animation duration to wait before resolving the promise or 'finish' to wait for the end
+ * @property {Function} [onFinish] a callback to run when the animation finishes
+ */
