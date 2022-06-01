@@ -1,18 +1,37 @@
-export class Avatar {
+import { initScene } from "../../utils/initScene.js";
+import {
+  AnimationMixer,
+  Clock
+} from "../../libs/three.module.js";
+import {
+  GLTFLoader
+} from "../../libs/GLTFLoader.js";
+// import {
+//   DRACOLoader
+// } from "../../libs/DRACOLoader.js";
+
+export class Avatar extends EventTarget {
   #colorOffset = {};
-  #placeholder = '';
-  #image = '';
   #currentAnimation = 'idle';
 
+  imageSize = 256;
+  #canvas = new OffscreenCanvas(this.imageSize, this.imageSize);
+  #scene;
+  #camera;
+  #renderer;
+  #_rendered = false;
+
   constructor({ colorOffset = {}, placeholder = '', image = '' }) {
+    super();
+    ({
+      scene: this.#scene,
+      camera: this.#camera,
+      renderer: this.#renderer,
+    } = initScene(this.#canvas, {alpha: true}));
+    this.#camera.position.set(24, 24, 24);		
+    this.renderAvatar({colorOffset})
+
     this.#colorOffset = colorOffset;
-    this.#image = image;
-    this.#placeholder = `data:image/svg+xml;utf8,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="30" width="40" height="40" style="fill:hsl(${colorOffset?.eyes?.h ?? 0 * 360},${colorOffset?.eyes?.s ?? 0 * 100},${colorOffset?.eyes?.l ?? 0 * 100}}"/></svg>`;
-    import('./services/modelRenderer.js').then(async ({ modelRenderer }) => {
-      const { model, image } = await modelRenderer.renderAvatar({ colorOffset });
-      this.mesh = model;
-      this.#image = image;
-    });
   }
 
   get serialized() {
@@ -20,19 +39,34 @@ export class Avatar {
   }
 
   get image() {
-    if (this.#image) return this.#image;
-    return this.#placeholder;
+    return new Promise(async resolve => {
+      await this.render();
+      resolve(this.#canvas.transferToImageBitmap());
+    });
   }
 
   get ready() {
+    if(this.#rendered) return Promise.resolve();
     return new Promise(resolve => {
-      const avatarInterval = setInterval(() => {
-        if (this.#image) {
-          resolve();
-          clearInterval(avatarInterval);
-        }
-      }, 25);
+      this.addEventListener('rendered', resolve);
     });
+  }
+
+  get #rendered() {
+    return this.#_rendered;
+  }
+
+  set #rendered(value) {
+    this.#_rendered = value;
+    this.dispatchEvent(new CustomEvent('rendered'));
+  }
+
+  get rendered() {
+    return this.#rendered;
+  }
+
+  get canvas() {
+    return this.#canvas;
   }
 
   /**
@@ -72,6 +106,103 @@ export class Avatar {
       }, duration*1000*options.await);
     })
   }
+
+    /**
+   * 
+   * @param {Object} AvatarRenderParams
+   * @param {import("../character.js").AvatarColorOffset} AvatarRenderParams.colorOffset 
+   * @returns 
+   */
+     async renderAvatar({ colorOffset = {} }) {
+      const loader = new GLTFLoader();
+      // const dracoLoader = new DRACOLoader();
+      // dracoLoader.setDecoderPath("/libs/draco/gltf/");
+      // loader.setDRACOLoader(dracoLoader);
+  
+      this.mesh = await new Promise((resolve, reject) => {
+        loader.load(
+          // resource URL
+          "../models/vox-character.glb",
+          // called when the resource is loaded
+          function (gltf) {
+            gltf.scene.traverse( ( object ) => {
+  
+              if ( object.isMesh ) {
+                Object.keys(colorOffset).forEach(key => {
+                  if(object.material.name.includes(key) || key === 'hands' && object.material.name.includes('ring')) {
+                    const { h, s, l } = colorOffset[key]
+                    if(colorOffset[key].set) object.material.color.setHSL(h,s,l);
+                    else object.material.color.offsetHSL(h,s,l);
+                  }
+                });
+              }
+            
+            } );
+  
+            const {animations} = gltf;
+  
+            const mixer = new AnimationMixer(gltf.scene);
+  
+            
+            const actions = Object.fromEntries(animations.map(animationClip => {
+              return [animationClip.name, mixer.clipAction(animationClip)]
+            }));
+            
+            Object.values(actions).forEach(action => {
+              action.enabled = true;
+              action.setEffectiveTimeScale(1);
+              action.setEffectiveWeight(0);
+              action.play();
+            });
+            actions.idle.setEffectiveWeight(1);
+            gltf.scene.userData.animations = {
+              mixer,
+              actions,
+              clock: new Clock()
+            };
+  
+            resolve(gltf.scene)
+            // gltf.animations; // Array<THREE.AnimationClip>
+            // gltf.scene; // THREE.Group
+            // gltf.scenes; // Array<THREE.Group>
+            // gltf.cameras; // Array<THREE.Camera>
+            // gltf.asset; // Object
+          },
+          // called while loading is progressing
+          function (xhr) {
+            console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+          },
+          // called when loading has errors
+          function (error) {
+            reject(error);
+            console.log("An error happened", error);
+          }
+        );
+      });
+      
+      // const model = new Mesh(
+      //   new BoxGeometry(0.5, 1, 0.5),
+      //   new MeshStandardMaterial({ color: color.hex }),
+      // );
+      this.mesh.userData.type = 'avatar';
+      const scale = 4;
+      this.mesh.scale.set(scale, scale, scale);
+      this.#scene.add(this.mesh);
+      this.#camera.lookAt(this.mesh.position);
+      this.#camera.updateProjectionMatrix();
+      return this.render(this.mesh);
+    }
+
+    async render(model = this.mesh) {
+      return new Promise(async resolve => {
+        this.#renderer.render(this.#scene, this.#camera);
+        model.userData.animations.mixer.update(
+          model.userData.animations.clock.getDelta()
+        );
+        this.#rendered = true;
+        resolve(model);
+      });
+    }
 }
 
 /**

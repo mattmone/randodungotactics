@@ -64,7 +64,7 @@ function rebuild(key, value) {
   };
   return new type[key](value);
 }
-export class Character {
+export class Character extends EventTarget {
   #saveTimeout = null;
   #name;
   #colorOffset;
@@ -77,7 +77,7 @@ export class Character {
   #direction;
   #hp;
   #mana;
-  #initialized = false;
+  #_initialized = false;
   #created;
   /**
    * creates a Character instance
@@ -102,6 +102,7 @@ export class Character {
     equipment = new Map(),
     direction = DIRECTION.NORTH,
   }) {
+    super();
     if (id) {
       this.#hydrate(id);
       return this;
@@ -255,11 +256,17 @@ export class Character {
     this.#saveCharacter();
   }
   get initialized() {
+    if(this.#initialized) return Promise.resolve(true);
     return new Promise(resolve => {
-      setInterval(() => {
-        if (this.#initialized) resolve(true);
-      }, 10);
+      this.addEventListener('initialized', () => resolve(true), {once: true});
     });
+  }
+  get #initialized() {
+    return this.#_initialized;
+  }
+  set #initialized(initialized) {
+    this.#_initialized = initialized;
+    this.dispatchEvent(new CustomEvent('initialized'));
   }
   get created() {
     return this.#created || new Date();

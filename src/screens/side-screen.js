@@ -80,6 +80,9 @@ class SideScreen extends LitElement {
       if (this.hasAttribute('open')) {
         this._triggeredBy = document.activeElement;
         this.dispatchEvent(new CustomEvent('before-open'));
+        Array.from(this.children).forEach(child => {
+          child.toggleAttribute('active', true);
+        })
 
         screen.addEventListener(
           'transitionend',
@@ -91,6 +94,9 @@ class SideScreen extends LitElement {
         );
       } else {
         this.dispatchEvent(new CustomEvent('before-close'));
+        Array.from(this.children).forEach(child => {
+          child.toggleAttribute('active', false);
+        })
 
         screen.addEventListener(
           'transitionend',

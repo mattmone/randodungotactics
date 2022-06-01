@@ -3,13 +3,14 @@ import { oneOf } from "../utils/oneOf.js";
 import { get, set, del } from "../../libs/idb-keyval.js";
 import { rollDice } from "../utils/rollDice.js";
 
-export class Crew {
+export class Crew extends EventTarget {
 	/** @type {Character[]} */
 	#members = [];
 	#saveCrewTimeout = null;
-	#ready = false;
+	#_ready = false;
 
 	constructor(id = "player") {
+		super();
 		this.id = id;
 		get(`crew/${id}`).then(async (crew) => {
 			if (crew)
@@ -19,11 +20,19 @@ export class Crew {
 		});
 	}
 
+	get #ready() {
+		return this.#_ready;
+	}
+
+	set #ready(value) {
+		this.#_ready = value;
+		this.dispatchEvent(new Event("ready"));
+	}
+
 	get ready() {
+		if(this.#ready) return Promise.resolve(true);
 		return new Promise((resolve) => {
-			setInterval(() => {
-				if (this.#ready) resolve(this);
-			}, 25);
+			this.addEventListener("ready", resolve, {once: true});
 		});
 	}
 

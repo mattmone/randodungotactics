@@ -5,6 +5,7 @@ import { progressStyles } from 'styles/progress.styles.js';
 import { selectorStyles } from '../styles/selector.styles.js';
 import { dieDisplay } from '../utils/dieDisplay.js';
 import { Inventory } from '../services/Inventory.js';
+import { Activatable} from "../utils/mixins/activatable.js";
 
 function statBoxTemplate(stat, value, progress) {
   return html`
@@ -15,7 +16,7 @@ function statBoxTemplate(stat, value, progress) {
     </div>
   `;
 }
-class CharacterContent extends LitElement {
+class CharacterContent extends Activatable(LitElement) {
   static get styles() {
     return [
       progressStyles,
@@ -64,7 +65,7 @@ class CharacterContent extends LitElement {
           text-shadow: black 0px 0px 4px;
         }
         #status-section {
-          height: 128px;
+          height: 256px;
           display: flex;
           justify-content: flex-start;
           gap: 8px;
@@ -142,6 +143,17 @@ class CharacterContent extends LitElement {
       if (this.category === 'equipment') {
         import('./equipment-content.js');
       }
+    } else if (changedProperties.has('character')) {
+      const renderAvatar = (context, imageCallback) => {
+        requestAnimationFrame(async () => {
+          await this.activated;
+          context.transferFromImageBitmap(await imageCallback());
+          renderAvatar(context, imageCallback);
+        });
+      };
+      const avatarCanvas = this.shadowRoot.getElementById('avatar');
+      const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+      renderAvatar(avatarContext, () => this.character.avatar.image);
     }
   }
 
@@ -189,7 +201,7 @@ class CharacterContent extends LitElement {
     return html`
       <input type="text" value=${this.character.name || 'name'} @input=${this.updateName} />
       <div id="status-section">
-        <img id="avatar" src=${this.character.avatar.image} />
+        <canvas id="avatar" width=${this.character.avatar?.imageSize} height=${this.character.avatar?.imageSize}></canvas>
         <div id="status">
           <div class="stat"><span>hp</span><span>${this.character.maxhp}</span></div>
           <div class="stat"><span>mana</span><span>${this.character.maxmana}</span></div>

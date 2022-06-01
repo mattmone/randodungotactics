@@ -2,8 +2,9 @@ import { LitElement, html, css } from 'lit-element';
 import { Crew } from '../services/crew.js';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
+import { Activatable} from "../utils/mixins/activatable.js";
 
-class RecruitContent extends LitElement {
+class RecruitContent extends Activatable(LitElement) {
   static get styles() {
     return [
       buttonStyles,
@@ -37,7 +38,7 @@ class RecruitContent extends LitElement {
         .recruit {
           flex-direction: column;
         }
-        .recruit img {
+        .recruit canvas {
           width: 100%;
         }
       `,
@@ -59,8 +60,24 @@ class RecruitContent extends LitElement {
       while (this.recruits.members.length + newRecruits.length < 5)
         newRecruits.push(this.recruits.random());
       await Promise.all(newRecruits);
-      await Promise.all(this.recruits.members.map(recruit => recruit.avatar.ready));
-      this.requestUpdate();
+      await Promise.all(this.recruits.members.map(recruit => recruit.avatar.ready)).then(
+				async () => {
+					this.requestUpdate();
+          await this.updateComplete;
+					const renderAvatar = (context, imageCallback) => {
+						requestAnimationFrame(async () => {
+              await this.activated;
+							context.transferFromImageBitmap(await imageCallback());
+							renderAvatar(context, imageCallback);
+						});
+					};
+					this.recruits.members.forEach((member) => {
+						const avatarCanvas = this.shadowRoot.getElementById(member.id);
+            const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+						renderAvatar(avatarContext, () => member.avatar.image);
+					});
+				}
+			);
     });
   }
 
@@ -82,7 +99,7 @@ class RecruitContent extends LitElement {
     return html` <section id="recruits">
       ${this.recruits.members.map(
         recruit => html`<button class="recruit" @click=${this.select(recruit)}>
-          <img src="${recruit?.avatar.image}" />
+          <canvas id="${recruit.id}" width=${recruit.avatar?.imageSize} height=${recruit.avatar?.imageSize}></canvas>
           <h2>${recruit.name}</h2>
         </button>`,
       )}
