@@ -172,7 +172,7 @@ class CharacterContent extends Activatable(LitElement) {
       if (!this.inventory) {
         const { Inventory } = await import('../services/Inventory.js');
         this.inventory = new Inventory();
-        await this.inventory.ready;
+        await this.inventory.initialized;
         await Promise.all([...this.inventory.items.map(item => item.initialized)]);
         this.requestUpdate();
       }

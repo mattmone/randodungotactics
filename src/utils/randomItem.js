@@ -5,15 +5,15 @@ const bodyNames = ['curiass', 'breastplate', 'chestplate', 'vest', 'chestpiece']
 const bootNames = ['boots', 'shoes', 'greaves', 'footguards'];
 const handNames = ['gloves', 'gauntlets', 'bracer', 'vambrace'];
 const headNames = ['helm', 'helmet', 'crown', 'hood', 'headguard'];
-const swordNames = ['sword', 'longsword', 'broadsword', 'rapier'];
+const swordNames = ['sword', 'longsword', 'broadsword'];
 const knifeNames = ['knife', 'dagger', 'stiletto', 'shank', 'sabre'];
 const axeNames = ['axe', 'battleaxe', 'waraxe', 'greataxe'];
-const polearmNames = ['polearm', 'spear', 'trident', 'lance', 'pike', 'halberd'];
+// const polearmNames = ['polearm', 'spear', 'trident', 'lance', 'pike', 'halberd'];
 const shortbowNames = ['bow', 'shortbow', 'hornbow', 'saddlebow'];
 const longbowNames = ['longbow', 'compositebow'];
 const crossbowNames = ['crossbow', 'arbalest'];
 const shieldNames = ['shield', 'buckler', 'kite', 'tower', 'pavise', 'scutum'];
-const staffNames = ['staff', 'quarterstaff'];
+// const staffNames = ['staff', 'quarterstaff'];
 const randomItems = [
   randomBody,
   randomBoots,
@@ -22,7 +22,7 @@ const randomItems = [
   randomSword,
   randomKnife,
   randomAxe,
-  randomPolearm,
+  // randomPolearm,
   randomShortbow,
   randomLongbow,
   randomCrossbow,
@@ -126,17 +126,17 @@ export async function randomKnife(level) {
   });
 }
 
-export async function randomPolearm(level) {
-  return await randomWeapon({
-    level,
-    hands: 2,
-    powerModifier: 2,
-    range: 2,
-    name: oneOf(polearmNames),
-    category: 'melee',
-    subType: 'polearm',
-  });
-}
+// export async function randomPolearm(level) {
+//   return await randomWeapon({
+//     level,
+//     hands: 2,
+//     powerModifier: 2,
+//     range: 2,
+//     name: oneOf(polearmNames),
+//     category: 'melee',
+//     subType: 'polearm',
+//   });
+// }
 
 export async function randomShortbow(level) {
   return await randomWeapon({
@@ -171,17 +171,17 @@ export async function randomCrossbow(level) {
     subType: 'crossbow',
   });
 }
-export async function randomStaff(level) {
-  return await randomWeapon({
-    level,
-    hands: 2,
-    powerModifier: 1.5,
-    range: 1,
-    name: oneOf(staffNames),
-    category: 'melee',
-    subType: 'staff',
-  });
-}
+// export async function randomStaff(level) {
+//   return await randomWeapon({
+//     level,
+//     hands: 2,
+//     powerModifier: 1.5,
+//     range: 1,
+//     name: oneOf(staffNames),
+//     category: 'melee',
+//     subType: 'staff',
+//   });
+// }
 export async function randomItem(level) {
   return oneOf(randomItems)(level);
 }

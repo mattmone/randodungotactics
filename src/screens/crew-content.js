@@ -58,8 +58,11 @@ class CrewContent extends Activatable(LitElement) {
 		super();
 		/** @type {Crew} */
 		this.crew = new Crew();
-		this.crew.ready.then(() => {
-			Promise.all(this.crew.members.map((member) => member.avatar.ready)).then(
+		this.crew.initialized.then(() => {
+			Promise.all(this.crew.members.map((member) => {
+				member.avatar.renderAvatar();
+				return member.avatar.initialized
+			})).then(
 				async () => {
 					this.requestUpdate();
           await this.updateComplete;

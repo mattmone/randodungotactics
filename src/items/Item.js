@@ -1,18 +1,22 @@
 import { rollDice } from '../utils/rollDice.js';
 import { get, set, createStore, del } from '../../libs/idb-keyval.js';
+import { Initializeable } from '../utils/baseClasses/initializable.js';
 
+/** @type {IDBObjectStore} */
 const idbStore = createStore('items', 'itemStore');
 
-export class Item {
-  _initialized = false;
+export class Item extends Initializeable {
+  /** @type {Timeout} */
   #saveTimeout = null;
+  /** @type {Date} */
   #created;
   /**
    *
-   * @param {ItemParams} param0
+   * @param {ItemParams} itemParamsRaw
    */
   constructor(itemParamsRaw) {
-    const itemParams = { ...itemParamsRaw, ...{ power: 1, strength: 1, effects: new Map() } };
+    super();
+    const itemParams = { ...{ power: 1, strength: 1, effects: new Map() }, ...itemParamsRaw };
     if (itemParams.id) {
       this.id = itemParams.id;
       this.hydrate(itemParams.id);
@@ -21,6 +25,10 @@ export class Item {
     this.initialize(itemParams);
   }
 
+  /**
+   * hydrate the item from the idb
+   * @param {string} id the id of the item
+   */
   async hydrate(id) {
     const item = await get(id, idbStore);
     this.initialize(item, true);
@@ -54,14 +62,6 @@ export class Item {
     if (!skipSave) this.#saveItem();
     this._initialized = true;
     this.#created = created;
-  }
-
-  get initialized() {
-    return new Promise(resolve => {
-      setInterval(() => {
-        if (this._initialized) resolve(true);
-      }, 10);
-    });
   }
 
   #saveItem() {
@@ -119,6 +119,10 @@ export class Item {
     del(this.id, idbStore);
   }
 }
+
+/**
+ * @typedef {Item} Item
+ */
 
 /**
  * @typedef {Object} ItemParams

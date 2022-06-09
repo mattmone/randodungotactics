@@ -32,6 +32,15 @@ const enemies = new Crew("enemy");
 if (enemies.members.length > 0) enemies.disband();
 enemies.random({ quantity: 5, level: 2, withEquipment: true });
 
+Promise.all([characters.initialized, enemies.initialized]).then(() => {
+	[...characters.members, ...enemies.members].forEach(async character => {
+		character.avatar.renderAvatar({meshInit: true});
+		await character.avatar.initialized;
+		const scale = 0.04;
+		character.avatar.mesh.scale.set(scale, scale, scale);
+	});
+});
+
 const enemyPosition = (tile) => {
 	return enemies.members.some((enemy) => enemy.tile === tile);
 };
@@ -156,11 +165,7 @@ class GameMap {
 	}
 
 	selectableCharacters() {
-		return characters.members.map(({ name, placed, avatar: { image } }) => ({
-			name,
-			placed,
-			avatarImage: image,
-		}));
+		return characters.members.map(({ id }) => id);
 	}
 
 	generateMap({ type = "largeRoad", width = 24, height = 12 }) {

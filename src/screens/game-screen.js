@@ -125,18 +125,30 @@ class GameScreen extends LitElement {
     return new Promise(async (resolve, reject) => {
       await import('./character-selection.js');
       const characterSelection = this.shadowRoot.querySelector('character-selection');
+      const {Crew} = await import('../services/crew.js');
+      const crew = new Crew();
       const characters = await this.gameMap.selectableCharacters();
-      characterSelection.characters = characters;
+      await crew.initialized;
+      const selectableCharacters = crew.members.filter(member => characters.includes(member.id))
+      await Promise.all(selectableCharacters.map((member) => {
+        member.avatar.renderAvatar();
+        return member.avatar.initialized
+      }));
+
+      characterSelection.characters = selectableCharacters;
       characterSelection.show();
-      characterSelection.addEventListener('character-selected', ({ detail: character }) => {
+      const selectionAbort = new AbortController();
+      characterSelection.addEventListener('character-selected', ({ detail: characterIndex }) => {
         characterSelection.hide();
-        resolve(characters.indexOf(character));
+        resolve(characterIndex);
         this.commenceActive = true;
-      });
+        selectionAbort.abort();
+      }, { signal: selectionAbort.signal });
       characterSelection.addEventListener('selection-cancelled', () => {
         characterSelection.hide();
         reject();
-      });
+        selectionAbort.abort();
+      }, {signal: selectionAbort.signal});
     });
   }
 

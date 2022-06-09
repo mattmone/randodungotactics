@@ -52,7 +52,7 @@ class RecruitContent extends Activatable(LitElement) {
   constructor() {
     super();
     this.recruits = new Crew('recruits');
-    this.recruits.ready.then(async () => {
+    this.recruits.initialized.then(async () => {
       this.recruits.members.forEach(recruit => {
         if (new Date() - recruit.created > 1000) this.recruits.remove(recruit);
       });
@@ -60,7 +60,10 @@ class RecruitContent extends Activatable(LitElement) {
       while (this.recruits.members.length + newRecruits.length < 5)
         newRecruits.push(this.recruits.random());
       await Promise.all(newRecruits);
-      await Promise.all(this.recruits.members.map(recruit => recruit.avatar.ready)).then(
+      await Promise.all(this.recruits.members.map(recruit => {
+        recruit.avatar.renderAvatar();
+        return recruit.avatar.initialized
+      })).then(
 				async () => {
 					this.requestUpdate();
           await this.updateComplete;

@@ -1,8 +1,9 @@
 import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from 'styles/button.styles.js';
 import { commonStyles } from 'styles/common.styles.js';
+import { Activatable } from 'utils/mixins/activatable.js';
 
-class CharacterSelection extends LitElement {
+class CharacterSelection extends Activatable(LitElement) {
   static get styles() {
     return [
       commonStyles,
@@ -49,7 +50,7 @@ class CharacterSelection extends LitElement {
           justify-content: center;
           flex-direction: column;
         }
-        button img {
+        button canvas {
           max-width: 100%;
           aspect-ratio: 1 / 1;
         }
@@ -79,15 +80,39 @@ class CharacterSelection extends LitElement {
     return { characters: Array };
   }
 
-  characters = [];
+  constructor() {
+    super();
+    this.characters = [];
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has('characters')) {
+      console.log('characters set');
+      this.characters.forEach((member) => {
+        const avatarCanvas = this.shadowRoot.getElementById(member.id);
+        const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+        this.renderAvatar(avatarContext, () => member.avatar.image);
+      });
+    }
+  }
+
+  renderAvatar(context, imageCallback) {
+    requestAnimationFrame(async () => {
+      await this.activated;
+      context.transferFromImageBitmap(await imageCallback());
+      this.renderAvatar(context, imageCallback);
+    });
+  };
 
   show() {
     this.toggleAttribute('hidden', false);
+    this.toggleAttribute('active', true);
     this.requestUpdate();
   }
 
   hide() {
     this.toggleAttribute('hidden', true);
+    this.toggleAttribute('active', false);
   }
 
   cancel() {
@@ -99,13 +124,13 @@ class CharacterSelection extends LitElement {
       <header>Character Selection</header>
       <div id="selection">
         ${this.characters.map(
-          character =>
+          (character, index) =>
             html`<button
               ?placed=${character.placed}
               @click=${() =>
-                this.dispatchEvent(new CustomEvent('character-selected', { detail: character }))}
+                this.dispatchEvent(new CustomEvent('character-selected', { detail: index }))}
             >
-              <img src=${character.avatarImage} />
+              <canvas id=${character.id} src=${character.avatarImage}></canvas>
               <span>${character.name}</span>
             </button>`,
         )}

@@ -1,14 +1,8 @@
 /**
- * @typedef {Object} Stats
- * @property {Number} strength
- * @property {Number} dexterity
- * @property {Number} consitution
- * @property {Number} speed
- * @property {Number} intellect
- * @property {Number} magic
+ * @typedef {Object} ProgressionStructure
+ * @property {Number} level
+ * @property {Number} progression
  *
- * @typedef {Object} Skills
- * 
  * @typedef {Object} AvatarColorOffset
  * @property {HSLColor} [eyes] the color of the eyes
  * @property {HSLColor} [pupils] the color of the eyes
@@ -28,15 +22,20 @@
  * @property {String} [id]
  * @property {String} name
  * @property {AvatarColorOffset} colorOffset
- * @property {Stats} [stats]
- * @property {Skills} [skills]
+ * @property {Map<string, ProgressionStructure>} [stats]
+ * @property {Map<string, ProgressionStructure} [skills]
  * @property {Position} [position]
- * @property {Map} [effects]
- * @property {Map} [modifiers]
- * @property {Map} [equipment]
+ * @property {Map<string, number>} [effects]
+ * @property {Map<string, number>} [modifiers]
+ * @property {Map<string, import('./items/Item.js').Item>} [equipment]
  * @property {Number} [direction]
  * @property {Number} [hp]
  * @property {Number} [mana]
+ * 
+ * @typedef {Object} Position
+ * @property {Number} x
+ * @property {Number} y
+ * @property {Number} z
  */
 import { DIRECTION } from './constants/directions.js';
 
@@ -51,6 +50,7 @@ import { Boots } from './items/Boots.js';
 import { skillModifier } from './utils/skillModifier.js';
 import { statModifier } from './utils/statModifier.js';
 import { LoopOnce } from './libs/three.module.js';
+import { Initializeable } from './utils/baseClasses/initializable.js';
 
 const idbStore = createStore('characters', 'characterStore');
 
@@ -64,20 +64,32 @@ function rebuild(key, value) {
   };
   return new type[key](value);
 }
-export class Character extends EventTarget {
+export class Character extends Initializeable {
+  /** @type {Timeout} */
   #saveTimeout = null;
+  /** @type {string} */
   #name;
+  /** @type {AvatarColorOffset} */
   #colorOffset;
+  /** @type {Map<string, ProgressionStructure>} */
   #stats;
+  /** @type {Map<string, ProgressionStructure} */
   #skills;
+  /** @type {Position} */
   #position;
+  /** @type {Map<string, number>} */
   #effects;
+  /** @type {Map<string, number>} */
   #modifiers;
+  /** @type {Map<string, import('./items/Item.js').Item>} */
   #equipment;
+  /** @type {Number} */
   #direction;
+  /** @type {number} */
   #hp;
+  /** @type {number} */
   #mana;
-  #_initialized = false;
+  /** @type {Date} */
   #created;
   /**
    * creates a Character instance
@@ -131,7 +143,7 @@ export class Character extends EventTarget {
       position: this.position,
       effects: this.effects,
       modifiers: this.modifiers,
-      equipment: this.equipment,
+      equipment: new Map(Array.from(this.equipment.entries()).map(([placement, item]) => [placement, item.serialized])),
       direction: this.direction,
       hp: this.hp,
       mana: this.mana,
@@ -180,7 +192,7 @@ export class Character extends EventTarget {
     this.hp = hp;
     this.mana = mana;
     this.#created = created;
-    this.#initialized = true;
+    this._initialized = true;
   }
 
   #saveCharacter() {
@@ -241,33 +253,25 @@ export class Character extends EventTarget {
     this.#effects = effects;
     this.#saveCharacter();
   }
+  
   get equipment() {
     return this.#equipment;
   }
+  
   set equipment(equipment) {
     this.#equipment = equipment;
     this.#saveCharacter();
   }
+  
   get direction() {
     return this.#direction;
   }
+  
   set direction(direction) {
     this.#direction = direction;
     this.#saveCharacter();
   }
-  get initialized() {
-    if(this.#initialized) return Promise.resolve(true);
-    return new Promise(resolve => {
-      this.addEventListener('initialized', () => resolve(true), {once: true});
-    });
-  }
-  get #initialized() {
-    return this.#_initialized;
-  }
-  set #initialized(initialized) {
-    this.#_initialized = initialized;
-    this.dispatchEvent(new CustomEvent('initialized'));
-  }
+
   get created() {
     return this.#created || new Date();
   }
@@ -407,6 +411,9 @@ export class Character extends EventTarget {
   }
   //#endregion
 
+  /**
+   * setup the character
+   */
   setup() {
     /** @type {Number} */
     this.hp = this.maxhp;
@@ -414,12 +421,20 @@ export class Character extends EventTarget {
     this.mana = this.maxmana;
   }
 
+  /**
+   * kill the character
+   * @returns {Promise<void>}
+   */
   async die() {
     console.log('died');
     this.avatar.swapAnimation('die', {clamp: true, loop: LoopOnce});
     return;
   }
 
+  /**
+   * progress a skill for the character
+   * @param {number} skillUsed the skill used
+   */
   progressSkill(skillUsed) {
     let characterSkill = this.skills.get(skillUsed);
     if (!characterSkill)
@@ -436,6 +451,10 @@ export class Character extends EventTarget {
     this.#saveCharacter();
   }
 
+  /**
+   * progress a stat on the character
+   * @param {string} statUsed the stat to progress
+   */
   progressStat(statUsed) {
     let characterStat = this.stats.get(statUsed);
     characterStat.progression += Math.max(10 - characterStat.level, 1);
@@ -447,6 +466,12 @@ export class Character extends EventTarget {
     this.#saveCharacter();
   }
 
+  /**
+   * equip an item to the character
+   * @param {string} category the category of the item to equip
+   * @param {import('./items/Item.js').Item} item the Item to equip
+   * @returns {null|import('./items/Item.js').Item} the item that was removed or null
+   */
   equip(category, item) {
     const removedItem = this.equipment.get(category);
     this.equipment.set(category, item);
@@ -454,6 +479,11 @@ export class Character extends EventTarget {
     return removedItem;
   }
 
+  /**
+   * unequip an item from the character
+   * @param {string} category the category of the item to unequip
+   * @returns {import('./items/Item.js').Item} the item that was removed or null
+   */
   unequip(category) {
     const removedItem = this.equipment.get(category);
     this.equipment.delete(category);
@@ -461,11 +491,21 @@ export class Character extends EventTarget {
     return removedItem;
   }
 
+  /**
+   * degrade a weapon
+   * @param {number} damage the damage to the weapon
+   * @param {Boolean} secondary whether the attack was a secondary weapon attack
+   * @returns {Number} the durability left of the weapon
+   */
   degradeWeapon(damage, secondary) {
     if (secondary) return this.equipment.get('secondary')?.degrade(damage / 10);
     return this.equipment.get('primary')?.degrade(damage / 10);
   }
 
+  /**
+   * distribute the damage to the character amongst the equipment and deal the final damage to the character
+   * @param {number} damage the damage to the character
+   */
   distributeDamage(damage) {
     damage -= this.equipment.get('body')?.degrade(damage) || 0;
     damage -= this.equipment.get('helm')?.degrade(damage) || 0;
@@ -473,6 +513,7 @@ export class Character extends EventTarget {
     damage -= this.equipment.get('boots')?.degrade(damage) || 0;
     this.hp -= damage;
   }
+
   destroy() {
     this.destroyed = true;
     for (const item of this.equipment.values()) item.destroy();

@@ -2,12 +2,12 @@ import { Character } from "../character.js";
 import { oneOf } from "../utils/oneOf.js";
 import { get, set, del } from "../../libs/idb-keyval.js";
 import { rollDice } from "../utils/rollDice.js";
+import { Initializeable } from "../utils/baseClasses/initializable.js";
 
-export class Crew extends EventTarget {
+export class Crew extends Initializeable {
 	/** @type {Character[]} */
 	#members = [];
 	#saveCrewTimeout = null;
-	#_ready = false;
 
 	constructor(id = "player") {
 		super();
@@ -16,23 +16,7 @@ export class Crew extends EventTarget {
 			if (crew)
 				this.#members = crew.map((member) => new Character({ id: member }));
 			await Promise.all(this.#members.map((member) => member.initialized));
-			this.#ready = true;
-		});
-	}
-
-	get #ready() {
-		return this.#_ready;
-	}
-
-	set #ready(value) {
-		this.#_ready = value;
-		this.dispatchEvent(new Event("ready"));
-	}
-
-	get ready() {
-		if(this.#ready) return Promise.resolve(true);
-		return new Promise((resolve) => {
-			this.addEventListener("ready", resolve, {once: true});
+			this._initialized = true;
 		});
 	}
 
@@ -246,25 +230,25 @@ export class Crew extends EventTarget {
 					randomBoots,
 					randomSword,
 					randomAxe,
-					randomPolearm,
+					// randomPolearm,
 					randomKnife,
 					randomShortbow,
 					randomLongbow,
 					randomCrossbow,
-					randomStaff,
+					// randomStaff,
 					randomHands,
 				} = await import("../utils/randomItem.js");
 				const possibilities = [];
 				if (character.skills.has("sword")) possibilities.push(randomSword);
 				if (character.skills.has("axe")) possibilities.push(randomAxe);
-				if (character.skills.has("polearm")) possibilities.push(randomPolearm);
+				// if (character.skills.has("polearm")) possibilities.push(randomPolearm);
 				if (character.skills.has("knife")) possibilities.push(randomKnife);
 				if (character.skills.has("shortbow"))
 					possibilities.push(randomShortbow);
 				if (character.skills.has("longbow")) possibilities.push(randomLongbow);
 				if (character.skills.has("crossbow"))
 					possibilities.push(randomCrossbow);
-				if (character.skills.has("staff")) possibilities.push(randomStaff);
+				// if (character.skills.has("staff")) possibilities.push(randomStaff);
 				if (possibilities.length)
 					character.equip("primary hand", await oneOf(possibilities)());
 				if (rollDice(6) >= 3) character.equip("body", await randomBody());

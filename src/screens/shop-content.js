@@ -11,11 +11,11 @@ class ShopContent extends LitElement {
     this.category = 'weapons';
     this.inventory = new Inventory('shop');
     this.playerInventory = new Inventory();
-    this.playerInventory.ready.then(() => {
+    this.playerInventory.initialized.then(() => {
       this.requestUpdate();
     });
     this.selectedItems = [];
-    this.inventory.ready.then(async () => {
+    this.inventory.initialized.then(async () => {
       if (!this.inventory.items?.length) await this.inventory.random({ quantity: 100 });
       await Promise.all(this.inventory.items.map(item => item.initialized));
       await Promise.all(
@@ -157,7 +157,7 @@ class ShopContent extends LitElement {
   }
 
   async buy() {
-    await this.playerInventory.ready;
+    await this.playerInventory.initialized;
     try {
       this.playerInventory.spendDungocoin(this.detailItem.price);
     } catch (error) {

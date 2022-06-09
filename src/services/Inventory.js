@@ -3,8 +3,6 @@ import { Item } from '../items/Item.js';
 
 export class Inventory {
   #items = [];
-  #readyTimeout = null;
-  #ready = false;
   #saveTimeout = null;
   #dungocoin = 0;
 
@@ -19,7 +17,7 @@ export class Inventory {
         this.#items = await Promise.all(storage.items.map(item => this.#build(item)));
       if (storage?.dungocoin) this.#dungocoin = storage.dungocoin;
       await Promise.all(this.#items.map(item => item.initialized));
-      this.#ready = true;
+      this._initialized = true;
       return true;
     });
   }
@@ -50,16 +48,6 @@ export class Inventory {
   }
 
   // #region getters and setters
-  get ready() {
-    return new Promise(resolve => {
-      this.#readyTimeout = setInterval(() => {
-        if (this.#ready) {
-          clearInterval(this.#readyTimeout);
-          resolve(true);
-        }
-      });
-    });
-  }
   get dungocoin() {
     return this.#dungocoin;
   }

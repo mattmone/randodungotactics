@@ -1,11 +1,12 @@
 import { initScene } from "../../utils/initScene.js";
 import { AnimationMixer, Clock } from "../../libs/three.module.js";
 import { GLTFLoader } from "../../libs/GLTFLoader.js";
+import { Initializeable } from "./utils/baseClasses/initializable.js";
 // import {
 //   DRACOLoader
 // } from "../../libs/DRACOLoader.js";
 
-export class Avatar extends EventTarget {
+export class Avatar extends Initializeable {
 	#colorOffset = {};
 	#currentAnimation = "idle";
 
@@ -14,18 +15,9 @@ export class Avatar extends EventTarget {
 	#scene;
 	#camera;
 	#renderer;
-	#_rendered = false;
 
 	constructor({ colorOffset = {}, placeholder = "", image = "" }) {
 		super();
-		({
-			scene: this.#scene,
-			camera: this.#camera,
-			renderer: this.#renderer,
-		} = initScene(this.#canvas, { alpha: true }));
-		this.#camera.position.set(24, 24, 24);
-		this.renderAvatar({ colorOffset });
-
 		this.#colorOffset = colorOffset;
 	}
 
@@ -35,29 +27,10 @@ export class Avatar extends EventTarget {
 
 	get image() {
 		return new Promise(async (resolve) => {
-			await this.render();
+      if(!this._initialized) await this.renderAvatar();
+			else await this.render();
 			resolve(this.#canvas.transferToImageBitmap());
 		});
-	}
-
-	get ready() {
-		if (this.#rendered) return Promise.resolve();
-		return new Promise((resolve) => {
-			this.addEventListener("rendered", resolve);
-		});
-	}
-
-	get #rendered() {
-		return this.#_rendered;
-	}
-
-	set #rendered(value) {
-		this.#_rendered = value;
-		this.dispatchEvent(new CustomEvent("rendered"));
-	}
-
-	get rendered() {
-		return this.#rendered;
 	}
 
 	get canvas() {
@@ -114,7 +87,9 @@ export class Avatar extends EventTarget {
 	 * @param {import("../character.js").AvatarColorOffset} AvatarRenderParams.colorOffset
 	 * @returns
 	 */
-	async renderAvatar({ colorOffset = {} }) {
+	async renderAvatar(avatarOpts = {}) {
+    const { colorOffset = this.#colorOffset } = avatarOpts;
+
 		const loader = new GLTFLoader();
 		// const dracoLoader = new DRACOLoader();
 		// dracoLoader.setDecoderPath("/libs/draco/gltf/");
@@ -184,14 +159,20 @@ export class Avatar extends EventTarget {
 			);
 		});
 
-		// const model = new Mesh(
-		//   new BoxGeometry(0.5, 1, 0.5),
-		//   new MeshStandardMaterial({ color: color.hex }),
-		// );
+    if(avatarOpts.meshInit) return this._initialized = true;
+
 		this.mesh.userData.type = "avatar";
 		const scale = 4;
 		this.mesh.scale.set(scale, scale, scale);
 		this.mesh.position.setY(-60);
+
+    ({
+			scene: this.#scene,
+			camera: this.#camera,
+			renderer: this.#renderer,
+		} = initScene(this.#canvas, { alpha: true }));
+		this.#camera.position.set(24, 24, 24);
+
 		this.#scene.add(this.mesh);
 		this.#camera.lookAt(this.#scene.position);
 		this.#camera.updateProjectionMatrix();
@@ -204,7 +185,7 @@ export class Avatar extends EventTarget {
 			model.userData.animations.mixer.update(
 				model.userData.animations.clock.getDelta()
 			);
-			this.#rendered = true;
+			this._initialized = true;
 			resolve(model);
 		});
 	}
