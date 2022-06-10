@@ -113,6 +113,7 @@
         }
       });
       const sliders = document.querySelectorAll('#controls input');
+      const sliderValues = new Map();
       const h = document.querySelector('[name="h"]');
       const s = document.querySelector('[name="s"]');
       const l = document.querySelector('[name="l"]');
@@ -134,10 +135,17 @@
         const button = document.createElement('button');
         button.textContent = name;
         button.addEventListener('click', () => {
-          document.querySelectorAll('#selectors button').forEach(btn => btn.toggleAttribute('active', false));
+          const priorButton = document.querySelector('#selectors button[active]');
+          if(priorButton) {
+            sliderValues.set(priorButton.textContent, {h: h.value, s: s.value, l:l.value});
+            priorButton.toggleAttribute('active', false);
+          }
           sliders.forEach(input => input.toggleAttribute('disabled', false));
           button.toggleAttribute('active', true);
-          sliders.forEach(input => input.value = 0);
+          sliders.forEach(input => {
+            input.value = sliderValues.get(name)?.[input.getAttribute('name')] ?? 0;
+          });
+          console.log(sliderValues);
         });
         document.querySelector('#selectors').appendChild(button);
       })
