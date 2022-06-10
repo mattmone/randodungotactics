@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Character Testing</title>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+  <script src="https://unpkg.com/aframe-orbit-controls@1.3.0/dist/aframe-orbit-controls.min.js"></script>
+  
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+    }
+    button {
+      background:none;
+      color:green;
+      border: 1px solid green;
+      border-radius:8px;
+    }
+    input, button, label {
+      cursor: pointer;
+    }
+    label {
+      color: white;
+      justify-content:space-between;
+    }
+    #animations {
+      position:fixed;
+      bottom:0;
+      left:0;
+      display:flex;
+      flex-direction:row;
+      flex-wrap: wrap;
+      z-index:20;
+      max-width:50%;
+    }
+    #animations button, #colorControls button {
+     flex: 1;
+    }
+    button[active] {
+      background: green;
+      color: white;
+    }
+    #selectors, #controls {
+      display:flex;
+    }
+    #colorControls {
+      max-width:100%;
+      position:fixed;
+      top:0;
+      right:0;
+      z-index:20;
+      display:flex;
+      flex-direction:column;
+    }
+    #colorControls label {
+      display:flex;
+      flex-direction:column;
+      text-align:center;
+      flex: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <a-scene>
+    <a-assets>
+      <a-asset-item id="character" src="models/vox-character.glb"></a-asset-item>
+    </a-assets>
+    <a-gltf-model id="model" animation-mixer="clip: idle" src="#character" scale="1 1 1" position="0 0 0"></a-gltf-model>
+    <a-entity camera look-controls orbit-controls="target: 0 0 0; minDistance: 0.1; maxDistance: 70; initialPosition: 200 200 200"></a-entity>
+    <a-sky color="#222"></a-sky>
+  </a-scene>
+  <nav id="animations">
+
+  </nav>
+  <section id="colorControls">
+    <div id="selectors"></div>
+    <div id="controls">
+      <label><input type='range' name="h" value="0" disabled>Hue</label>
+      <label><input type='range' name="s" value="0" disabled>Saturation</label>
+      <label><input type='range' name="l" value="0" min="-100" max="100" disabled>Lightness</label>
+    </div>
+  </section>
+  <script type="module">
+    const characterModel = document.querySelector('a-gltf-model');
+    characterModel.addEventListener('loaded', async (event) => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const obj = characterModel.object3D;
+      const animations = obj.children[0].animations.map(animation => animation.name);
+      animations.forEach(animation => {
+        const button = document.createElement('button');
+        button.textContent = animation;
+        button.addEventListener('click', () => {
+          characterModel.setAttribute('animation-mixer', `clip: ${animation}; crossFadeDuration: 0.4;${animation === 'die' ? 'clampWhenFinished: true; loop: once;' : 'clampWhenFinished: false; loop: repeat;'}`);
+        });
+        document.querySelector('#animations').appendChild(button);
+      });
+      const names = new Set();
+      const originalHSL = new Map();
+      obj.traverse((object) => {
+        if (object.isMesh) {
+          names.add(object.material.name.replace('.001','').split('-')[0]);
+          const hslObject = {};
+          object.material.color.getHSL(hslObject);
+          originalHSL.set(object.material.name, Object.values(hslObject));
+        }
+      });
+      const sliders = document.querySelectorAll('#controls input');
+      const h = document.querySelector('[name="h"]');
+      const s = document.querySelector('[name="s"]');
+      const l = document.querySelector('[name="l"]');
+      sliders.forEach(slider => slider.addEventListener('input', ({target: input}) => {
+        const location = document.querySelector('#selectors button[active]').textContent;
+        const hsl = [
+          h.value/100, 
+          s.value/100, 
+          l.value/100
+        ];
+        obj.traverse((object) => {
+          if (object.isMesh) 
+            if (object.material.name.replace('.001','').split('-')[0] === location) {
+              object.material.color.setHSL(...originalHSL.get(object.material.name).map((value, index) => value + hsl[index]));
+            }
+        });
+      }));
+      names.forEach(name => {
+        const button = document.createElement('button');
+        button.textContent = name;
+        button.addEventListener('click', () => {
+          document.querySelectorAll('#selectors button').forEach(btn => btn.toggleAttribute('active', false));
+          sliders.forEach(input => input.toggleAttribute('disabled', false));
+          button.toggleAttribute('active', true);
+          sliders.forEach(input => input.value = 0);
+        });
+        document.querySelector('#selectors').appendChild(button);
+      })
+    })
+
+  </script>
+</body>
+
+</html>
