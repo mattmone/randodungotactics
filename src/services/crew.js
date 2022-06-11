@@ -9,10 +9,14 @@ export class Crew extends Initializeable {
 	#members = [];
 	#saveCrewTimeout = null;
 
-	constructor(id = "player") {
+	constructor(id = "player", clean) {
 		super();
+		console.log('initializing crew', id);
 		this.id = id;
-		get(`crew/${id}`).then(async (crew) => {
+		if(clean) {
+			del(`crew/${id}`);
+			this._initialized = true;
+		} else get(`crew/${id}`).then(async (crew) => {
 			if (crew)
 				this.#members = crew.map((member) => new Character({ id: member }));
 			await Promise.all(this.#members.map((member) => member.initialized));
@@ -25,11 +29,15 @@ export class Crew extends Initializeable {
 	}
 
 	get membersById() {
-		return this.#members.map((member) => member.id);
+		return Array.from(new Set(this.#members.map((member) => member.id)));
 	}
 
 	set members(_) {
-		throw Error("Crew.members is read-only");
+		throw Error("Crew.members is read-only, interact with `add` or `remove` instead.");
+	}
+
+	get allDead() {
+		return this.#members.every((member) => member.dead);
 	}
 
 	#saveCrew() {
@@ -39,7 +47,17 @@ export class Crew extends Initializeable {
 		}, 100);
 	}
 
+	memberById(id) {
+		return this.#members.find((member) => member.id === id);
+	}
+
+	destroy() {
+		this.#members = [];
+		return del(`crew/${this.id}`);
+	}
+
 	add(member = {}) {
+		console.log(member);
 		const newMember =
 			member instanceof Character ? member : new Character(member);
 		this.#members = [...this.members, newMember];
@@ -129,7 +147,6 @@ export class Crew extends Initializeable {
 						l: -0.6 + Math.random() * 1.2,
 					},
 				};
-				console.log("crew", characterOptions.colorOffset);
 				characterOptions.stats = new Map([
 					["strength", { level: 1, progression: 0 }],
 					[

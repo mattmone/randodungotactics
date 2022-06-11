@@ -27,8 +27,7 @@ export class Avatar extends Initializeable {
 
 	get image() {
 		return new Promise(async (resolve) => {
-      if(!this._initialized) await this.renderAvatar();
-			else await this.render();
+      await this.render();
 			resolve(this.#canvas.transferToImageBitmap());
 		});
 	}

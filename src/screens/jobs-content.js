@@ -40,12 +40,11 @@ class JobsContent extends LitElement {
 
   selectJob(mapIndex, mapType) {
     return async () => {
-      console.log('selected job');
       await this.gameScreen.gameMapLoaded;
-      console.log('loaded');
       this.gameScreen.selectMap(mapIndex, mapType);
       document.querySelector('#opening_screen').toggleAttribute('hidden', true);
       this.gameScreen.toggleAttribute('hidden', false);
+      this.dispatchEvent(new CustomEvent('game-start'));
     };
   }
 

@@ -154,7 +154,7 @@ class GameScreen extends LitElement {
 
   async canvasClick({ x, y }) {
     if (this.nonClick) return (this.nonClick = false);
-    const { clickPosition, childCount, endPhase, damage, position } = await this.gameMap.mapClick({
+    const { clickPosition, childCount, endPhase, damage, position, loot } = await this.gameMap.mapClick({
       x,
       y,
     });
@@ -174,6 +174,10 @@ class GameScreen extends LitElement {
       setTimeout(() => {
         this.notificationOpen = false;
       }, 1500);
+    }
+    if(endPhase === 'win') {
+      alert('You win!');
+      this.dispatchEvent(new CustomEvent('game-win', { detail: { loot } }));
     }
   }
 

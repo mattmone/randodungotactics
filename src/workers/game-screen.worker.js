@@ -11,11 +11,15 @@ import {
 	Raycaster,
 	AnimationMixer,
 	VectorKeyframeTrack,
+	QuaternionKeyframeTrack,
 	AnimationClip,
 	Clock,
 	Object3D,
 	Quaternion,
 	LoopOnce,
+	InterpolateDiscrete,
+	InterpolateLinear,
+	InterpolateSmooth
 } from "../../libs/three.module.js";
 
 import { makeMap } from "../utils/makeMap.js";
@@ -88,11 +92,12 @@ function turnSort(participant1, participant2) {
 	return sort;
 }
 /** Class representing the game map */
-class GameMap {
+class GameMap extends EventTarget{
+	
 	/**
 	 * @type {Character[]}
 	 */
-	placedCharacters = new Set();
+	placedCharacters = new Crew('placed', true);
 	/**
 	 * @type {Group[]}
 	 */
@@ -100,11 +105,11 @@ class GameMap {
 	/**
 	 * @type {Group[]}
 	 */
-	renderedMaps = [];
+	#renderedMaps = [];
 	/**
 	 * @type {Group[]}
 	 */
-	entryMaps = [];
+	#entryMaps = [];
 	/**
 	 * @type {Mesh[]}
 	 */
@@ -122,6 +127,7 @@ class GameMap {
 	 * @param {Object} params the game scene
 	 */
 	constructor({ canvas }) {
+		super();
 		/**
 		 * @type {Canvas}
 		 */
@@ -145,6 +151,26 @@ class GameMap {
 		return this;
 	}
 
+	get renderedMaps() {
+		return this.#renderedMaps;
+	}
+
+	set renderedMaps(value) {
+		this.#renderedMaps = value;
+		console.log('renderedMaps', value);
+		this.dispatchEvent(new CustomEvent("map-rendered", { detail: value }));
+	}
+
+	get entryMaps() {
+		return this.#entryMaps;
+	}
+
+	set entryMaps(value) {
+		this.#entryMaps = value;
+		console.log('entryMaps', value);
+		this.dispatchEvent(new CustomEvent("entry-map-rendered", { detail: value }));
+	}
+
 	setSize(width, height) {
 		this.canvas.width = width;
 		this.canvas.height = height;
@@ -165,7 +191,7 @@ class GameMap {
 	}
 
 	selectableCharacters() {
-		return characters.members.map(({ id }) => id);
+		return characters.members.filter(({dead}) => !dead).map(({ id }) => id);
 	}
 
 	generateMap({ type = "largeRoad", width = 24, height = 12 }) {
@@ -220,8 +246,8 @@ class GameMap {
 			xPosition = -map[0].length / 2;
 		}
 		group.name = mapName;
-		if (characterPlacement) this.entryMaps.push(group);
-		else this.renderedMaps.push(group);
+		if (characterPlacement) this.entryMaps = [...this.entryMaps, group];
+		else this.renderedMaps = [...this.renderedMaps, group];
 	}
 
 	renderTileExtras({ tree, elevation, texture, rock, cubeHeight }) {
@@ -310,18 +336,31 @@ class GameMap {
 
 		let endPhase = false,
 			damage,
-			position;
+			position,
+			loot;
 		if (this.phase === "move") endPhase = await this.move(clickPosition);
-		if (this.phase === "action" && this.action === "attack")
+		if (this.phase === "action" && this.action === "attack") {
 			[endPhase, damage, position] = await this.attack(clickPosition);
-		return { clickPosition, childCount, endPhase, damage, position };
+			// if all enemies are dead, move to 'win' phase
+			if(enemies.allDead) {
+				endPhase = 'win';
+				loot = enemies.loot;
+			}
+		}
+
+		return { clickPosition, loot, childCount, endPhase, damage, position };
 	}
 
 	async mapAvailable(index, entry) {
+		const map = () => (entry ? this.entryMaps : this.renderedMaps)[index];
+		if(map()) return Promise.resolve(map())
 		return new Promise((resolve) => {
-			const interval = setInterval(() => {
-				if ((entry ? this.entryMaps : this.renderedMaps)[index]) resolve();
-			}, 16);
+			const signal = new AbortController();
+			this.addEventListener(`${entry ? 'entry-' : ''}map-rendered`, () => {
+				if(!map()) return;
+				resolve(map());
+				signal.abort();
+			}, { signal });
 		});
 	}
 
@@ -393,13 +432,15 @@ class GameMap {
 		this.map = this.renderedMaps.splice(index, 1)[0];
 
 		const enemyTiles = this.map.children.filter((tile) => tile.userData.enemy);
-		enemies.members.forEach((enemy) => {
+		let unplacedEnemy= enemies.members.find((enemy) => !enemy.tile);
+		while (unplacedEnemy) {
 			const placementTile = oneOf(enemyTiles);
-			this.placeCharacter({ character: enemy }, placementTile, true);
-		});
+			this.placeCharacter({ character: unplacedEnemy }, placementTile, true);
+			unplacedEnemy = enemies.members.find((enemy) => !enemy.tile);
+		} while (unplacedEnemy);
 
 		this.map.children.forEach((tile) => {
-			const characterAtPosition = Array.from(this.placedCharacters).find(
+			const characterAtPosition = Array.from(this.placedCharacters.members).find(
 				(character) => positionEquals(tile.position, character.position)
 			);
 			if (!characterAtPosition) return;
@@ -413,14 +454,22 @@ class GameMap {
 			this.camera.zoom = 2;
 			this.focalPoint.y = -3;
 		}
+		
 		this.camera.position.set(-24, 24, -24);
 		this.camera.lookAt(this.map.position);
 		this.camera.updateProjectionMatrix();
 		this.focalPoint.add(this.map);
+		await this.createPanAnimation({endPosition: new Vector3(-24, 24, -24), steps: [
+			new Vector3(-24, 10, -24),
+			new Vector3(24, 10, -24),
+			new Vector3(24, 10, 24),
+			new Vector3(-24, 10, 24),
+			new Vector3(-24, 10, -24),
+		], panStepDuration: 1});
 	}
 
 	async startBattle() {
-		this.participants = [...this.placedCharacters, ...enemies.members].sort(
+		this.participants = [...this.placedCharacters.members, ...enemies.members].sort(
 			turnSort
 		);
 		this.participants.forEach((character) => {
@@ -560,7 +609,7 @@ class GameMap {
 					enemyPosition(nextTile)
 				)
 					continue;
-				const tileParticipant = Array.from(this.placedCharacters).find(
+				const tileParticipant = this.placedCharacters.members.find(
 					(participant) => nextTile === participant.tile
 				);
 				if (!tileParticipant) {
@@ -857,6 +906,76 @@ class GameMap {
 		mesh.rotateY(angle);
 	}
 
+	createPanAnimation({
+		mesh = this.camera,
+		startPosition = this.camera.position,
+		endPosition,
+		steps = [],
+		panStepDuration = 1
+	}) {
+		return new Promise(resolve => {
+			const temporalAnimation = {
+				mixer: new AnimationMixer(mesh),
+				clock: new Clock(),
+			};
+			const animationTiming = [0, ...steps.map(() => 1), 1].map((step, index) => panStepDuration*index);
+			const positionStops = [...startPosition.toArray()];
+			if(steps.length) positionStops.push(...steps.flatMap(step => step.toArray()));
+			positionStops.push(...endPosition.toArray());
+			const translationTrack = new VectorKeyframeTrack(
+				".position",
+				animationTiming,
+				positionStops,
+				InterpolateSmooth
+			);
+			const rotationStops = [...mesh.quaternion.toArray()];
+			const dummyCamera = this.camera.clone();
+			if(steps.length) {
+				steps.forEach(step => {
+					dummyCamera.position.set(...step.toArray());
+					dummyCamera.lookAt(this.focalPoint.position);
+					rotationStops.push(...dummyCamera.quaternion.toArray());
+				});
+			}
+			this.scene.add(dummyCamera);
+			dummyCamera.position.set(endPosition.x, endPosition.y, endPosition.z);
+			dummyCamera.lookAt(this.focalPoint.position);
+			rotationStops.push(...dummyCamera.quaternion.toArray());
+			
+			const rotationTrack = new QuaternionKeyframeTrack(
+				".quaternion",
+				animationTiming,
+				rotationStops,
+				InterpolateSmooth
+			);
+			const animationClip = new AnimationClip(null, -1, [translationTrack, rotationTrack]);
+			const animationAction = temporalAnimation.mixer.clipAction(animationClip);
+			animationAction.play();
+			if (!mesh.userData.clock) mesh.userData.clock = new Clock();
+			mesh.userData.temporalAnimation = temporalAnimation;
+			this.animationsObjects.push(mesh);
+			temporalAnimation.mixer.addEventListener(
+				"loop",
+				() => {
+					requestAnimationFrame(() => {
+						dummyCamera.removeFromParent();
+						mesh.position.set(...endPosition.toArray());
+						mesh.lookAt(this.map.position);
+						mesh.updateProjectionMatrix();
+						resolve();
+					});
+					animationAction.stop();
+					temporalAnimation.mixer.uncacheAction(animationClip, mesh);
+					this.animationsObjects.splice(
+						this.animationsObjects.indexOf(mesh),
+						1
+					);
+				},
+				{ once: true }
+			);
+		})
+	}
+
 	createMoveAnimation({
 		mesh = this.map,
 		startPosition = this.map.position,
@@ -869,12 +988,13 @@ class GameMap {
 				mixer: new AnimationMixer(mesh),
 				clock: new Clock(),
 			};
-			if (!endPointVector)
+			if (!endPointVector) {
 				endPointVector = new Vector3(
 					-endPosition.x,
 					startPosition.y,
 					-endPosition.z
 				);
+			}
 			const animationTiming = mesh.userData.animations?.actions?.walk
 				? startPosition.distanceTo(endPointVector) / 2
 				: 0.3;
@@ -945,6 +1065,13 @@ class GameMap {
 		enemy
 	) {
 		placement.children.forEach((child) => child.removeFromParent());
+		if(placement.children.length) {
+			const remove = enemies.members.find(({avatar}) => avatar.mesh === placement.children[0]);
+			remove.placed = false;
+			remove.tile = false;
+			remove.position = false;
+			placement.children[0].removeFromParent();
+		}
 		if (!character) character = characters.members[characterIndex];
 		character.tile = placement;
 		character.placed = true;

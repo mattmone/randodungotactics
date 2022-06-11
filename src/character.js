@@ -89,6 +89,7 @@ export class Character extends Initializeable {
   #hp;
   /** @type {number} */
   #mana;
+  #dead = false;
   /** @type {Date} */
   #created;
   /**
@@ -148,7 +149,15 @@ export class Character extends Initializeable {
       hp: this.hp,
       mana: this.mana,
       created: this.#created,
+      damage: this.damage,
+      maxhp: this.maxhp,
+      maxmana: this.maxmana,
+      attackRange: this.attackRange,
     };
+  }
+
+  get dead() {
+    return this.#dead;
   }
 
   async #hydrate(id) {
@@ -321,7 +330,7 @@ export class Character extends Initializeable {
   }
 
   get tile() {
-    return this.avatar.mesh.userData.childOf;
+    return this.avatar.mesh?.userData?.childOf;
   }
 
   set tile(tile) {
@@ -426,7 +435,7 @@ export class Character extends Initializeable {
    * @returns {Promise<void>}
    */
   async die() {
-    console.log('died');
+    this.#dead = true;
     this.avatar.swapAnimation('die', {clamp: true, loop: LoopOnce});
     return;
   }

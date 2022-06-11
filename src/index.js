@@ -36,6 +36,14 @@ buttons.jobButton.addEventListener('click', async () => {
   document.querySelector('#jobs-screen').toggleAttribute('open');
 });
 
+document.querySelector('jobs-content').addEventListener('game-start', () => {
+  document.querySelector('game-screen').addEventListener('game-win', ({detail: {loot}}) => {
+    document.querySelector('game-screen').toggleAttribute('hidden', true);
+    document.querySelector('#opening_screen').toggleAttribute('hidden', false);
+    document.querySelector('#jobs-screen').toggleAttribute('open', false);
+  })
+});
+
 buttons.shopButton.addEventListener(
   'enable-shop',
   () => {
@@ -56,6 +64,8 @@ document.querySelector('#crew-screen').addEventListener('before-close', () => {
 });
 
 updateCrewCount();
+
+const playerWorker = new SharedWorker('/workers/player.worker.js', {type: 'module'});
 
 function updateCrewCount() {
   import('../libs/idb-keyval.js')

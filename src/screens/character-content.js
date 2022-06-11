@@ -4,7 +4,6 @@ import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
 import { selectorStyles } from '../styles/selector.styles.js';
 import { dieDisplay } from '../utils/dieDisplay.js';
-import { Inventory } from '../services/Inventory.js';
 import { Activatable} from "../utils/mixins/activatable.js";
 
 function statBoxTemplate(stat, value, progress) {
@@ -153,7 +152,7 @@ class CharacterContent extends Activatable(LitElement) {
       };
       const avatarCanvas = this.shadowRoot.getElementById('avatar');
       const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-      renderAvatar(avatarContext, () => this.character.avatar.image);
+      renderAvatar(avatarContext, () => this.player.memberAvatarImage(this.character.id));
     }
   }
 

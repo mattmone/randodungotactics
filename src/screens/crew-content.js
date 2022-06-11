@@ -1,8 +1,8 @@
 import { LitElement, html, css } from "lit-element";
+import { wrap, transfer } from 'comlink';
 import { buttonStyles } from "../styles/button.styles.js";
 import { commonStyles } from "../styles/common.styles.js";
 import { progressStyles } from "styles/progress.styles.js";
-import { Crew } from "../services/crew.js";
 import { Activatable} from "../utils/mixins/activatable.js";
 
 class CrewContent extends Activatable(LitElement) {
@@ -51,35 +51,36 @@ class CrewContent extends Activatable(LitElement) {
 	}
 
 	static get properties() {
-		return { crew: { type: Array }, selectedMember: { type: Object }};
+		return { crewMembers: { type: Array }, selectedMember: { type: Object }};
 	}
 
 	constructor() {
 		super();
-		/** @type {Crew} */
-		this.crew = new Crew();
-		this.crew.initialized.then(() => {
-			Promise.all(this.crew.members.map((member) => {
-				member.avatar.renderAvatar();
-				return member.avatar.initialized
-			})).then(
-				async () => {
-					this.requestUpdate();
-          await this.updateComplete;
-					const renderAvatar = (context, imageCallback) => {
-						requestAnimationFrame(async () => {
-              await this.activated;
-							context.transferFromImageBitmap(await imageCallback());
-							renderAvatar(context, imageCallback);
-						});
-					};
-					this.crew.members.forEach((member) => {
-						const avatarCanvas = this.shadowRoot.getElementById(member.id);
-            const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-						renderAvatar(avatarContext, () => member.avatar.image);
-					});
-				}
-			);
+		this.crewMembers = [];
+		this.initPlayer();
+	}
+
+	async initPlayer() {
+		this.playerWorker = new SharedWorker('/workers/player.worker.js', {type: 'module'});
+		const Player = wrap(this.playerWorker.port);
+		this.player = await new Player();
+		this.shadowRoot.querySelector('character-content').player = this.player;
+		await this.player.initialized;
+		await this.player.membersInitialized;
+		this.crewMembers = await this.player.crewMembers;
+		this.requestUpdate();
+		await this.updateComplete;
+		const renderAvatar = async (context, imageCallback) => {
+			await this.activated;
+			requestAnimationFrame(async () => {
+				context.transferFromImageBitmap(await imageCallback());
+				renderAvatar(context, imageCallback);
+			});
+		};		
+		this.crewMembers.forEach(({id}) => {
+			const avatarCanvas = this.shadowRoot.getElementById(id);
+			const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+			renderAvatar(avatarContext, () => this.player.memberAvatarImage(id));
 		});
 	}
 
@@ -99,7 +100,7 @@ class CrewContent extends Activatable(LitElement) {
 	}
 
 	recruit({ detail: newMember }) {
-		this.crew.add(newMember);
+		this.player.crew.add(newMember);
 		this.shadowRoot.getElementById("recruit-screen").toggleAttribute("open");
 	}
 
@@ -110,12 +111,12 @@ class CrewContent extends Activatable(LitElement) {
 	render() {
 		return html`
 			<section id="crew">
-				${this.crew.members.map(
+			${this.crewMembers.map(
 					(member) => html`<button
 						class="crewMember"
 						@click=${this.selectCrew(member)}
 					>
-						<canvas id="${member.id}" width=${member.avatar?.imageSize} height=${member.avatar?.imageSize}></canvas>
+						<canvas id="${member.id}" width="256" height="256"></canvas>
 						<h2>${member.name}</h2>
 					</button>`
 				)}
