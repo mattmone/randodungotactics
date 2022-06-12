@@ -1,12 +1,14 @@
 import { get, set } from '../../libs/idb-keyval.js';
 import { Item } from '../items/Item.js';
+import { Initializeable } from '../utils/baseClasses/initializable.js';
 
-export class Inventory {
+export class Inventory extends Initializeable {
   #items = [];
   #saveTimeout = null;
   #dungocoin = 0;
 
   constructor(id = 'player') {
+    super();
     this.id = id;
     this.refresh();
   }
