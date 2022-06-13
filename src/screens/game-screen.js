@@ -125,17 +125,8 @@ class GameScreen extends LitElement {
     return new Promise(async (resolve, reject) => {
       await import('./character-selection.js');
       const characterSelection = this.shadowRoot.querySelector('character-selection');
-      const {Crew} = await import('../services/crew.js');
-      const crew = new Crew();
-      const characters = await this.gameMap.selectableCharacters();
-      await crew.initialized;
-      const selectableCharacters = crew.members.filter(member => characters.includes(member.id))
-      await Promise.all(selectableCharacters.map((member) => {
-        member.avatar.renderAvatar();
-        return member.avatar.initialized
-      }));
-
-      characterSelection.characters = selectableCharacters;
+      
+      characterSelection.characters = await this.gameMap.selectableCharacters();
       characterSelection.show();
       const selectionAbort = new AbortController();
       characterSelection.addEventListener('character-selected', ({ detail: characterIndex }) => {

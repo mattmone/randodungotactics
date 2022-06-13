@@ -119,6 +119,7 @@ class CharacterContent extends Activatable(LitElement) {
       category: String,
       inventory: Object,
       recruits: { type: Boolean, reflect: true },
+      active: { type: Boolean } 
     };
   }
 
@@ -145,14 +146,13 @@ class CharacterContent extends Activatable(LitElement) {
     } else if (changedProperties.has('character')) {
       const renderAvatar = (context, imageCallback) => {
         requestAnimationFrame(async () => {
-          await this.activated;
           context.transferFromImageBitmap(await imageCallback());
           renderAvatar(context, imageCallback);
         });
       };
       const avatarCanvas = this.shadowRoot.getElementById('avatar');
       const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-      renderAvatar(avatarContext, () => this.player.memberAvatarImage(this.character.id));
+      renderAvatar(avatarContext, () => this.hasAttribute('recruits') ? this.character.avatar.image : this.player.memberAvatarImage(this.character.id));
     }
   }
 
@@ -181,7 +181,7 @@ class CharacterContent extends Activatable(LitElement) {
 
   recruit() {
     this.dispatchEvent(
-      new CustomEvent('recruited', { detail: this.character, composed: true, bubbles: true }),
+      new CustomEvent('recruited', { detail: this.character.serialized, composed: true, bubbles: true }),
     );
   }
 
@@ -248,7 +248,8 @@ class CharacterContent extends Activatable(LitElement) {
               html`<button
                 class="equipment-slot"
                 ?equipped=${this.character.equipment.get(slot)}
-                ?disabled=${this.secondaryHandDisabled(slot)}
+                ?disabled=${this.secondaryHandDisabled(slot) || this.hasAttribute('recruits')}
+                ?hidden=${this.hasAttribute('recruits') && !this.character.equipment.get(slot)}
                 @click=${this.showEquipment(slot)}
               >
                 <span class="slot-name">${slot}</span>

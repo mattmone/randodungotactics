@@ -21,6 +21,7 @@ export class Crew extends Initializeable {
 				this.#members = crew.map((member) => new Character({ id: member }));
 			await Promise.all(this.#members.map((member) => member.initialized));
 			this._initialized = true;
+			console.log('crew init')
 		});
 	}
 
@@ -57,7 +58,6 @@ export class Crew extends Initializeable {
 	}
 
 	add(member = {}) {
-		console.log(member);
 		const newMember =
 			member instanceof Character ? member : new Character(member);
 		this.#members = [...this.members, newMember];
@@ -66,7 +66,7 @@ export class Crew extends Initializeable {
 	}
 
 	remove(removedMember, nonDestructive) {
-		this.#members = this.members.filter((member) => member !== removedMember);
+		this.#members = this.members.filter((member) => member.id !== removedMember.id);
 		if (!nonDestructive) removedMember.destroy();
 		this.#saveCrew();
 	}

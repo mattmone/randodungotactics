@@ -88,6 +88,7 @@ export class Avatar extends Initializeable {
 	 */
 	async renderAvatar(avatarOpts = {}) {
     const { colorOffset = this.#colorOffset } = avatarOpts;
+		if(this._initialized && !avatarOpts.rerender) return;
 
 		const loader = new GLTFLoader();
 		// const dracoLoader = new DRACOLoader();

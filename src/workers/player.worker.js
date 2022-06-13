@@ -6,6 +6,10 @@ import { Initializeable } from '../utils/baseClasses/initializable.js';
 // start them up immediately on worker instantiation
 const _crew = new Crew();
 const _inventory = new Inventory();
+_crew.members.forEach(async member => {
+  await member.initialized;
+  member.avatar.renderAvatar();
+})
 
 class PlayerSharedWorker extends Initializeable {
   #crew = _crew;
@@ -14,6 +18,7 @@ class PlayerSharedWorker extends Initializeable {
   constructor() {
     super();
     Promise.all([this.#crew.initialized, this.#inventory.initialized]).then(() => { 
+      console.log('init player worker');
       this._initialized = true; 
     });
   }
@@ -22,8 +27,15 @@ class PlayerSharedWorker extends Initializeable {
     return this.#inventory.items.map(item => item.serialized);
   }
 
+  get aliveMemberIds() {
+    return this.#crew.members.filter(({dead}) => !dead).map(({ id }) => id)
+  }
+
   get crewMembers() {
-    return this.#crew.members.map(member => member.serialized);
+    return new Promise(async resolve => {
+      await this.membersInitialized;
+      resolve(this.#crew.members.map(member => member.serialized));
+    });
   }
 
   get membersInitialized() {
@@ -33,8 +45,20 @@ class PlayerSharedWorker extends Initializeable {
 		}));
 	}
 
+  addMember(member) {
+    this.#crew.add(member);
+  }
+
+  crewIncludes(id) {
+    return this.#crew.members.some(member => member.id === id);
+  }
+
   getMemberById(id) {
     return this.#crew.memberById(id).serialized;
+  }
+
+  getMembersById(ids) {
+    return this.#crew.members.filter(member => ids.includes(member.id)).map(member => member.serialized);
   }
 
   memberAvatarImage(id) {

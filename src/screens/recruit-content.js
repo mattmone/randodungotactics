@@ -46,7 +46,7 @@ class RecruitContent extends Activatable(LitElement) {
   }
 
   static get properties() {
-    return { recruits: { type: Object }, selectedRecruit: { type: Object } };
+    return { recruits: { type: Object }, selectedRecruit: { type: Object }, active: { type: Boolean } };
   }
 
   constructor() {
@@ -63,24 +63,21 @@ class RecruitContent extends Activatable(LitElement) {
       await Promise.all(this.recruits.members.map(recruit => {
         recruit.avatar.renderAvatar();
         return recruit.avatar.initialized
-      })).then(
-				async () => {
-					this.requestUpdate();
-          await this.updateComplete;
-					const renderAvatar = (context, imageCallback) => {
-						requestAnimationFrame(async () => {
-              await this.activated;
-							context.transferFromImageBitmap(await imageCallback());
-							renderAvatar(context, imageCallback);
-						});
-					};
-					this.recruits.members.forEach((member) => {
-						const avatarCanvas = this.shadowRoot.getElementById(member.id);
-            const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-						renderAvatar(avatarContext, () => member.avatar.image);
-					});
-				}
-			);
+      }));
+      this.requestUpdate();
+      await this.updateComplete;
+      const renderAvatar = (context, imageCallback) => {
+        requestAnimationFrame(async () => {
+          await this.activated;
+          context.transferFromImageBitmap(await imageCallback());
+          renderAvatar(context, imageCallback);
+        });
+      };
+      this.recruits.members.forEach((member) => {
+        const avatarCanvas = this.shadowRoot.getElementById(member.id);
+        const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+        renderAvatar(avatarContext, () => member.avatar.image);
+      });
     });
   }
 
@@ -108,7 +105,7 @@ class RecruitContent extends Activatable(LitElement) {
       )}
       <side-screen @before-close=${this.screenClosed} id="character-screen">
         <character-content
-          ?recruits=${true}
+          recruits
           @recruited=${this.recruited}
           .character=${this.selectedRecruit}
         ></character-content>

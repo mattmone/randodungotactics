@@ -65,6 +65,7 @@ document.querySelector('#crew-screen').addEventListener('before-close', () => {
 
 updateCrewCount();
 
+// initialize a little sooner
 const playerWorker = new SharedWorker('/workers/player.worker.js', {type: 'module'});
 
 function updateCrewCount() {

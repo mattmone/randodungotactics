@@ -1,11 +1,14 @@
 import { LitElement, html, css } from "lit-element";
-import { wrap, transfer } from 'comlink';
+import { repeat } from 'https://unpkg.com/lit-html@2.2.5/directives/repeat.js';
 import { buttonStyles } from "../styles/button.styles.js";
 import { commonStyles } from "../styles/common.styles.js";
 import { progressStyles } from "styles/progress.styles.js";
 import { Activatable} from "../utils/mixins/activatable.js";
+import { UsesPlayer } from "../utils/mixins/usesPlayer.js";
 
-class CrewContent extends Activatable(LitElement) {
+class CrewContent extends UsesPlayer(Activatable(LitElement)) {
+	#charactersUpdated = false;
+
 	static get styles() {
 		return [
 			progressStyles,
@@ -51,7 +54,7 @@ class CrewContent extends Activatable(LitElement) {
 	}
 
 	static get properties() {
-		return { crewMembers: { type: Array }, selectedMember: { type: Object }};
+		return { crewMembers: { type: Array }, selectedMember: { type: Object }, active: {type: Boolean}};
 	}
 
 	constructor() {
@@ -61,33 +64,49 @@ class CrewContent extends Activatable(LitElement) {
 	}
 
 	async initPlayer() {
-		this.playerWorker = new SharedWorker('/workers/player.worker.js', {type: 'module'});
-		const Player = wrap(this.playerWorker.port);
-		this.player = await new Player();
-		this.shadowRoot.querySelector('character-content').player = this.player;
 		await this.player.initialized;
 		await this.player.membersInitialized;
+		this.shadowRoot.querySelector('character-content').player = this.player;
+		await this.updateChatacters(true);
+		await this.renderCharacterAvatars();
+	}
+
+	async updateChatacters(skipUpdate) {
 		this.crewMembers = await this.player.crewMembers;
-		this.requestUpdate();
-		await this.updateComplete;
+		if(!skipUpdate) this.#charactersUpdated = true;
+		return this.updateComplete;
+	}
+
+	async renderCharacterAvatars() {
 		const renderAvatar = async (context, imageCallback) => {
+			if(this.#charactersUpdated) {
+				 this.#charactersUpdated = false;
+				return;
+			}
+			const image = await imageCallback();
 			await this.activated;
+			if(!context.canvas.parentElement.parentElement) context = this.acquireAvatarContext(context.canvas.id);
 			requestAnimationFrame(async () => {
-				context.transferFromImageBitmap(await imageCallback());
+				context.transferFromImageBitmap(image);
 				renderAvatar(context, imageCallback);
 			});
 		};		
 		this.crewMembers.forEach(({id}) => {
-			const avatarCanvas = this.shadowRoot.getElementById(id);
-			const avatarContext = avatarCanvas.getContext("bitmaprenderer");
+			const avatarContext = this.acquireAvatarContext(id);
 			renderAvatar(avatarContext, () => this.player.memberAvatarImage(id));
 		});
+	}
+
+	acquireAvatarContext(id) {
+		const avatarCanvas = this.shadowRoot.getElementById(id);
+		return avatarCanvas.getContext("bitmaprenderer");
 	}
 
 	selectCrew(member) {
 		return async () => {
 			await import("./character-content.js");
 			this.selectedMember = member;
+			this.toggleAttribute('active', false);
 			this.shadowRoot
 				.getElementById("character-screen")
 				.toggleAttribute("open");
@@ -96,23 +115,27 @@ class CrewContent extends Activatable(LitElement) {
 
 	async showRecruits() {
 		await import("./recruit-content.js");
+		this.toggleAttribute('active', false);
 		this.shadowRoot.getElementById("recruit-screen").toggleAttribute("open");
 	}
 
-	recruit({ detail: newMember }) {
-		this.player.crew.add(newMember);
+	async recruit({ detail: newMember }) {
+		await this.player.addMember(newMember);
+		await this.updateChatacters();
+		await this.renderCharacterAvatars();
+		this.toggleAttribute('active', true);
 		this.shadowRoot.getElementById("recruit-screen").toggleAttribute("open");
 	}
 
 	screenClosed() {
+		this.toggleAttribute('active', true);
 		this.requestUpdate();
 	}
 
 	render() {
 		return html`
 			<section id="crew">
-			${this.crewMembers.map(
-					(member) => html`<button
+			${this.crewMembers.map(member => html`<button
 						class="crewMember"
 						@click=${this.selectCrew(member)}
 					>

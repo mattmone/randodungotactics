@@ -2,8 +2,9 @@ import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from 'styles/button.styles.js';
 import { commonStyles } from 'styles/common.styles.js';
 import { Activatable } from 'utils/mixins/activatable.js';
+import { UsesPlayer } from '../utils/mixins/usesPlayer.js';
 
-class CharacterSelection extends Activatable(LitElement) {
+class CharacterSelection extends UsesPlayer(Activatable(LitElement)) {
   static get styles() {
     return [
       commonStyles,
@@ -77,60 +78,74 @@ class CharacterSelection extends Activatable(LitElement) {
   }
 
   static get properties() {
-    return { characters: Array };
+    return { characters: Array, selectableCharacters: Array };
   }
 
   constructor() {
     super();
     this.characters = [];
+    this.selectableCharacters = [];
   }
 
-  updated(changedProperties) {
-    if (changedProperties.has('characters')) {
-      console.log('characters set');
-      this.characters.forEach((member) => {
-        const avatarCanvas = this.shadowRoot.getElementById(member.id);
-        const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-        this.renderAvatar(avatarContext, () => member.avatar.image);
-      });
-    }
+  async initPlayer() {
+    await this.player.initialized;
+    await this.player.membersInitialized;
   }
 
-  renderAvatar(context, imageCallback) {
+  async renderAvatar(context, imageCallback) {
+    if(!this.selectableCharacters.length) return;
+    await this.activated;
+    if(!context.canvas.parentElement.parentElement) context = this.acquireAvatarContext(context.canvas.id);
     requestAnimationFrame(async () => {
-      await this.activated;
       context.transferFromImageBitmap(await imageCallback());
       this.renderAvatar(context, imageCallback);
     });
   };
 
-  show() {
+  acquireAvatarContext(id) {
+		const avatarCanvas = this.shadowRoot.getElementById(id);
+		return avatarCanvas.getContext("bitmaprenderer");
+	}
+
+  async show() {
     this.toggleAttribute('hidden', false);
     this.toggleAttribute('active', true);
-    this.requestUpdate();
+    await this.initPlayer();
+    this.selectableCharacters = await this.player.getMembersById(this.characters);
+    await this.updateComplete;
+    this.selectableCharacters.forEach(({id}) => {
+      const avatarContext = this.acquireAvatarContext(id);
+      this.renderAvatar(avatarContext, () => this.player.memberAvatarImage(id));
+    });
   }
 
   hide() {
     this.toggleAttribute('hidden', true);
     this.toggleAttribute('active', false);
+    this.selectableCharacters = [];
   }
 
   cancel() {
     this.dispatchEvent(new CustomEvent('selection-cancelled'));
   }
 
+  selectCharacter(index) {
+    return () => {
+      this.dispatchEvent(new CustomEvent('character-selected', { detail: index }))
+    }
+  }
+
   render() {
     return html` <section>
       <header>Character Selection</header>
       <div id="selection">
-        ${this.characters.map(
+        ${this.selectableCharacters.map(
           (character, index) =>
             html`<button
               ?placed=${character.placed}
-              @click=${() =>
-                this.dispatchEvent(new CustomEvent('character-selected', { detail: index }))}
+              @click=${this.selectCharacter(index)}
             >
-              <canvas id=${character.id} src=${character.avatarImage}></canvas>
+              <canvas id=${character.id}></canvas>
               <span>${character.name}</span>
             </button>`,
         )}
