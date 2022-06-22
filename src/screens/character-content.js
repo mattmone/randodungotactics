@@ -4,7 +4,7 @@ import { commonStyles } from '../styles/common.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';
 import { selectorStyles } from '../styles/selector.styles.js';
 import { dieDisplay } from '../utils/dieDisplay.js';
-import { Activatable} from "../utils/mixins/activatable.js";
+import { Activatable } from '../utils/mixins/activatable.js';
 
 function statBoxTemplate(stat, value, progress) {
   return html`
@@ -119,7 +119,7 @@ class CharacterContent extends Activatable(LitElement) {
       category: String,
       inventory: Object,
       recruits: { type: Boolean, reflect: true },
-      active: { type: Boolean } 
+      active: { type: Boolean },
     };
   }
 
@@ -151,8 +151,12 @@ class CharacterContent extends Activatable(LitElement) {
         });
       };
       const avatarCanvas = this.shadowRoot.getElementById('avatar');
-      const avatarContext = avatarCanvas.getContext("bitmaprenderer");
-      renderAvatar(avatarContext, () => this.hasAttribute('recruits') ? this.character.avatar.image : this.player.memberAvatarImage(this.character.id));
+      const avatarContext = avatarCanvas.getContext('bitmaprenderer');
+      renderAvatar(avatarContext, () =>
+        this.hasAttribute('recruits')
+          ? this.character.avatar.image
+          : this.player.memberAvatarImage(this.character.id),
+      );
     }
   }
 
@@ -168,20 +172,17 @@ class CharacterContent extends Activatable(LitElement) {
 
   showEquipment(category) {
     return async () => {
-      if (!this.inventory) {
-        const { Inventory } = await import('../services/Inventory.js');
-        this.inventory = new Inventory();
-        await this.inventory.initialized;
-        await Promise.all([...this.inventory.items.map(item => item.initialized)]);
-        this.requestUpdate();
-      }
       this.shadowRoot.querySelector('equipment-content').showEquipment(category);
     };
   }
 
   recruit() {
     this.dispatchEvent(
-      new CustomEvent('recruited', { detail: this.character.serialized, composed: true, bubbles: true }),
+      new CustomEvent('recruited', {
+        detail: this.character.serialized,
+        composed: true,
+        bubbles: true,
+      }),
     );
   }
 
@@ -200,7 +201,11 @@ class CharacterContent extends Activatable(LitElement) {
     return html`
       <input type="text" value=${this.character.name || 'name'} @input=${this.updateName} />
       <div id="status-section">
-        <canvas id="avatar" width=${this.character.avatar?.imageSize} height=${this.character.avatar?.imageSize}></canvas>
+        <canvas
+          id="avatar"
+          width=${this.character.avatar?.imageSize}
+          height=${this.character.avatar?.imageSize}
+        ></canvas>
         <div id="status">
           <div class="stat"><span>hp</span><span>${this.character.maxhp}</span></div>
           <div class="stat"><span>mana</span><span>${this.character.maxmana}</span></div>

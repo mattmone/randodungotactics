@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit-element';
 import { buttonStyles } from 'styles/button.styles.js';
 import { commonStyles } from 'styles/common.styles.js';
+import { UsesPlayer } from '../utils/mixins/usesPlayer.js';
 
 const mappings = {
   'primary hand': ['weapon'],
@@ -8,7 +9,15 @@ const mappings = {
   feet: ['boots'],
   fingers: ['ring'],
 };
-class EquipmentContent extends LitElement {
+class EquipmentContent extends UsesPlayer(LitElement) {
+  get #crewUpdate() {
+    return new Promise(resolve => {
+      console.log('crew update triggering');
+      this.dispatchEvent(
+        new CustomEvent('update-crew', { bubbles: true, composed: true, detail: resolve }),
+      );
+    });
+  }
   static get styles() {
     return [
       commonStyles,
@@ -56,8 +65,8 @@ class EquipmentContent extends LitElement {
       itemLocation: String,
       selectedCatgory: String,
       detailItem: Object,
-      inventory: Object,
       character: Object,
+      inventory: Object,
     };
   }
 
@@ -71,8 +80,8 @@ class EquipmentContent extends LitElement {
     return Array.from(this.character.equipment.entries());
   }
 
-  get equippedItems() {
-    return Array.from(this.character.equipment.values());
+  get equippedItemIds() {
+    return Array.from(this.character.equipment.values()).map(item => item.id);
   }
 
   showEquipment(category) {
@@ -90,15 +99,16 @@ class EquipmentContent extends LitElement {
   }
 
   async equip() {
-    const removedItem = this.character.equip(this.selectedCatgory, this.detailItem);
-    this.inventory.remove(this.detailItem, true);
-    if (removedItem) this.inventory.add(removedItem);
+    await this.player.equipItem(this.character, this.selectedCatgory, this.detailItem);
+    await this.#crewUpdate;
+    console.log('crew updated', this.character);
     this.requestUpdate();
   }
 
   async unequip() {
-    const removedItem = this.character.unequip(this.selectedCatgory);
-    if (removedItem) this.inventory.add(removedItem);
+    await this.player.unequipItem(this.character, this.selectedCatgory, this.detailItem);
+    await this.#crewUpdate;
+    console.log('crew updated', this.character);
     this.requestUpdate();
   }
 
@@ -107,7 +117,7 @@ class EquipmentContent extends LitElement {
   }
 
   async refreshInventory() {
-    await this.inventory.refresh();
+    await this.player.refreshInventory();
     this.requestUpdate();
   }
 
@@ -125,7 +135,7 @@ class EquipmentContent extends LitElement {
               ([location, item]) =>
                 html` <button equipped @click=${this.showDetail(item)}>${item.name}</button> `,
             )}
-          ${this.inventory?.items
+          ${this.inventory
             ?.filter(
               item =>
                 this.itemLocation.includes(item.type) || this.itemLocation.includes(item.slot),
@@ -144,11 +154,11 @@ class EquipmentContent extends LitElement {
         </div>
         <side-screen id="details">
           <detail-content
-            ?equipped=${this.equippedItems.includes(this.detailItem)}
+            ?equipped=${this.equippedItemIds.includes(this.detailItem?.id)}
             .item=${this.detailItem}
           >
             <button
-              ?hidden=${this.equippedItems.includes(this.detailItem)}
+              ?hidden=${this.equippedItemIds.includes(this.detailItem?.id)}
               id="equip"
               slot="actions"
               @click=${this.equip}
@@ -156,7 +166,7 @@ class EquipmentContent extends LitElement {
               Equip
             </button>
             <button
-              ?hidden=${!this.equippedItems.includes(this.detailItem)}
+              ?hidden=${!this.equippedItemIds.includes(this.detailItem?.id)}
               id="unequip"
               slot="actions"
               @click=${this.unequip}

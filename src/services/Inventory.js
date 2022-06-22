@@ -16,7 +16,7 @@ export class Inventory extends Initializeable {
   refresh() {
     return get(`inventory/${this.id}`).then(async storage => {
       if (storage?.items)
-        this.#items = await Promise.all(storage.items.map(item => this.#build(item)));
+        this.#items = await Promise.all(storage.items.map(item => this.getItem(item)));
       if (storage?.dungocoin) this.#dungocoin = storage.dungocoin;
       await Promise.all(this.#items.map(item => item.initialized));
       this._initialized = true;
@@ -29,24 +29,6 @@ export class Inventory extends Initializeable {
     this.#saveTimeout = setTimeout(() => {
       set(`inventory/${this.id}`, this.storage);
     }, 100);
-  }
-
-  async #build(item) {
-    const [{ Weapon }, { Body }, { Hands }, { Head }, { Boots }] = await Promise.all([
-      import('../items/Weapon.js'),
-      import('../items/Body.js'),
-      import('../items/Hands.js'),
-      import('../items/Head.js'),
-      import('../items/Boots.js'),
-    ]);
-    const type = {
-      Weapon: Weapon,
-      Body: Body,
-      Hands: Hands,
-      Head: Head,
-      Boots: Boots,
-    };
-    return new type[item.itemType](item);
   }
 
   // #region getters and setters
@@ -130,6 +112,10 @@ export class Inventory extends Initializeable {
     this.#saveInventory();
   }
 
+  getItem(item) {
+    return Item.retrieve(item.id ?? item);
+  }
+
   spendDungocoin(amount) {
     if (this.#dungocoin < amount) throw new Error('Not enough dungocoin');
     this.#dungocoin -= amount;
@@ -138,13 +124,12 @@ export class Inventory extends Initializeable {
   }
 
   add(item) {
-    this.#items = [...this.#items, item instanceof Item ? item : this.#build(item)];
+    this.#items = [...this.#items, item instanceof Item ? item : this.getItem(item)];
     this.#saveInventory();
   }
 
   remove(removedItem, skipDestroy) {
-    if (!(removedItem instanceof Item)) return;
-    this.#items = this.#items.filter(item => item !== removedItem);
+    this.#items = this.#items.filter(item => item.id !== removedItem.id);
     if (!skipDestroy) removedItem.destroy();
     this.#saveInventory();
   }

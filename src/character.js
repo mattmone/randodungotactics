@@ -17,7 +17,7 @@
  * @property {Number} h between 0 and 1
  * @property {Number} s between 0 and 1
  * @property {Number} l between 0 and 1
- * 
+ *
  * @typedef {Object} CharacterOptions
  * @property {String} [id]
  * @property {String} name
@@ -31,7 +31,7 @@
  * @property {Number} [direction]
  * @property {Number} [hp]
  * @property {Number} [mana]
- * 
+ *
  * @typedef {Object} Position
  * @property {Number} x
  * @property {Number} y
@@ -46,6 +46,7 @@ import { Body } from './items/Body.js';
 import { Hands } from './items/Hands.js';
 import { Head } from './items/Head.js';
 import { Boots } from './items/Boots.js';
+import { Item } from './items/Item.js';
 
 import { skillModifier } from './utils/skillModifier.js';
 import { statModifier } from './utils/statModifier.js';
@@ -54,16 +55,6 @@ import { Initializeable } from './utils/baseClasses/initializable.js';
 
 const idbStore = createStore('characters', 'characterStore');
 
-function rebuild(key, value) {
-  const type = {
-    Weapon: Weapon,
-    Body: Body,
-    Hands: Hands,
-    Head: Head,
-    Boots: Boots,
-  };
-  return new type[key](value);
-}
 export class Character extends Initializeable {
   /** @type {Timeout} */
   #saveTimeout = null;
@@ -144,7 +135,12 @@ export class Character extends Initializeable {
       position: this.position,
       effects: this.effects,
       modifiers: this.modifiers,
-      equipment: new Map(Array.from(this.equipment.entries()).map(([placement, item]) => [placement, item.serialized])),
+      equipment: new Map(
+        Array.from(this.equipment.entries()).map(([placement, item]) => [
+          placement,
+          item.serialized,
+        ]),
+      ),
       direction: this.direction,
       hp: this.hp,
       mana: this.mana,
@@ -165,7 +161,7 @@ export class Character extends Initializeable {
     this.#initialize(character);
   }
 
-  #initialize({
+  async #initialize({
     id,
     name,
     colorOffset,
@@ -191,12 +187,14 @@ export class Character extends Initializeable {
     this.modifiers = modifiers;
     this.equipment = new Map(
       equipment
-        ? Array.from(equipment.entries()).map(([key, value]) => [
-            key,
-            rebuild(value.itemType, value),
-          ])
+        ? await Promise.all(
+            Array.from(equipment.entries())
+              .filter(([key, value]) => value)
+              .map(async ([key, value]) => [key, await Item.retrieve(value)]),
+          )
         : [],
     );
+    console.log(equipment, this.equipment);
     this.direction = direction;
     this.hp = hp;
     this.mana = mana;
@@ -262,20 +260,20 @@ export class Character extends Initializeable {
     this.#effects = effects;
     this.#saveCharacter();
   }
-  
+
   get equipment() {
     return this.#equipment;
   }
-  
+
   set equipment(equipment) {
     this.#equipment = equipment;
     this.#saveCharacter();
   }
-  
+
   get direction() {
     return this.#direction;
   }
-  
+
   set direction(direction) {
     this.#direction = direction;
     this.#saveCharacter();
@@ -436,7 +434,7 @@ export class Character extends Initializeable {
    */
   async die() {
     this.#dead = true;
-    this.avatar.swapAnimation('die', {clamp: true, loop: LoopOnce});
+    this.avatar.swapAnimation('die', { clamp: true, loop: LoopOnce });
     return;
   }
 
@@ -482,7 +480,10 @@ export class Character extends Initializeable {
    * @returns {null|import('./items/Item.js').Item} the item that was removed or null
    */
   equip(category, item) {
+    console.log('building', item);
+    if (!(item instanceof Item)) item = Item.retrieve(item);
     const removedItem = this.equipment.get(category);
+    console.log(item);
     this.equipment.set(category, item);
     this.#saveCharacter();
     return removedItem;

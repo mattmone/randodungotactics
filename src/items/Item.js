@@ -25,6 +25,29 @@ export class Item extends Initializeable {
     this.initialize(itemParams);
   }
 
+  static async #build(item) {
+    const [{ Weapon }, { Body }, { Hands }, { Head }, { Boots }] = await Promise.all([
+      import('../items/Weapon.js'),
+      import('../items/Body.js'),
+      import('../items/Hands.js'),
+      import('../items/Head.js'),
+      import('../items/Boots.js'),
+    ]);
+    const type = {
+      Weapon: Weapon,
+      Body: Body,
+      Hands: Hands,
+      Head: Head,
+      Boots: Boots,
+    };
+    return new type[item.itemType](item);
+  }
+
+  static async retrieve(item = {}) {
+    console.log(item);
+    return this.#build(await get(item.id ?? item, idbStore));
+  }
+
   /**
    * hydrate the item from the idb
    * @param {string} id the id of the item
@@ -77,7 +100,7 @@ export class Item extends Initializeable {
   }
 
   get serialized() {
-    return { ...this, created: this.created };
+    return { ...this, type: this.type, created: this.created };
   }
 
   get created() {
