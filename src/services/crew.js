@@ -11,7 +11,6 @@ export class Crew extends Initializeable {
 
   constructor(id = 'player', clean) {
     super();
-    console.log('initializing crew', id);
     this.id = id;
     if (clean) {
       del(`crew/${id}`);
@@ -21,7 +20,6 @@ export class Crew extends Initializeable {
         if (crew) this.#members = crew.map(member => new Character({ id: member }));
         await Promise.all(this.#members.map(member => member.initialized));
         this._initialized = true;
-        console.log('crew init');
       });
   }
 

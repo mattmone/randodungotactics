@@ -12,7 +12,6 @@ const mappings = {
 class EquipmentContent extends UsesPlayer(LitElement) {
   get #crewUpdate() {
     return new Promise(resolve => {
-      console.log('crew update triggering');
       this.dispatchEvent(
         new CustomEvent('update-crew', { bubbles: true, composed: true, detail: resolve }),
       );
@@ -101,14 +100,12 @@ class EquipmentContent extends UsesPlayer(LitElement) {
   async equip() {
     await this.player.equipItem(this.character, this.selectedCatgory, this.detailItem);
     await this.#crewUpdate;
-    console.log('crew updated', this.character);
     this.requestUpdate();
   }
 
   async unequip() {
     await this.player.unequipItem(this.character, this.selectedCatgory, this.detailItem);
     await this.#crewUpdate;
-    console.log('crew updated', this.character);
     this.requestUpdate();
   }
 

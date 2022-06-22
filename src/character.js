@@ -194,7 +194,6 @@ export class Character extends Initializeable {
           )
         : [],
     );
-    console.log(equipment, this.equipment);
     this.direction = direction;
     this.hp = hp;
     this.mana = mana;
@@ -480,10 +479,8 @@ export class Character extends Initializeable {
    * @returns {null|import('./items/Item.js').Item} the item that was removed or null
    */
   equip(category, item) {
-    console.log('building', item);
     if (!(item instanceof Item)) item = Item.retrieve(item);
     const removedItem = this.equipment.get(category);
-    console.log(item);
     this.equipment.set(category, item);
     this.#saveCharacter();
     return removedItem;

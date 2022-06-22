@@ -44,7 +44,6 @@ export class Item extends Initializeable {
   }
 
   static async retrieve(item = {}) {
-    console.log(item);
     return this.#build(await get(item.id ?? item, idbStore));
   }
 

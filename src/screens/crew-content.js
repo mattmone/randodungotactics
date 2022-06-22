@@ -75,7 +75,6 @@ class CrewContent extends UsesPlayer(Activatable(LitElement)) {
   }
 
   async triggerUpdate({ detail: done }) {
-    console.log('update triggered');
     await this.updateChatacters(true);
     await this.updateInventory();
     this.selectedMember = await this.player.getMemberById(this.selectedMember.id);

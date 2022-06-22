@@ -18,7 +18,6 @@ class PlayerSharedWorker extends Initializeable {
   constructor() {
     super();
     Promise.all([this.#crew.initialized, this.#inventory.initialized]).then(() => {
-      console.log('init player worker');
       this._initialized = true;
     });
   }
@@ -34,7 +33,6 @@ class PlayerSharedWorker extends Initializeable {
   get crewMembers() {
     return new Promise(async resolve => {
       await this.membersInitialized;
-      console.log('returning crew members');
       resolve(this.#crew.members.map(member => member.serialized));
     });
   }
@@ -65,7 +63,6 @@ class PlayerSharedWorker extends Initializeable {
     const removedItem = this.#crew.memberById(character.id).equip(category, item);
     this.#inventory.remove(item, true);
     if (removedItem) this.#inventory.add(removedItem);
-    console.log('equip item', character, category, item);
     return true;
   }
 
