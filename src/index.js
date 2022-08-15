@@ -41,6 +41,11 @@ document.querySelector('jobs-content').addEventListener('game-start', () => {
     document.querySelector('game-screen').toggleAttribute('hidden', true);
     document.querySelector('#opening_screen').toggleAttribute('hidden', false);
     document.querySelector('#jobs-screen').toggleAttribute('open', false);
+  });
+  document.querySelector('game-screen').addEventListener('game-lose', ({detail: {loot}}) => {
+    document.querySelector('game-screen').toggleAttribute('hidden', true);
+    document.querySelector('#opening_screen').toggleAttribute('hidden', false);
+    document.querySelector('#jobs-screen').toggleAttribute('open', false);
   })
 });
 

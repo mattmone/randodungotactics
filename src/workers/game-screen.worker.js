@@ -17,8 +17,6 @@ import {
 	Object3D,
 	Quaternion,
 	LoopOnce,
-	InterpolateDiscrete,
-	InterpolateLinear,
 	InterpolateSmooth
 } from "../../libs/three.module.js";
 
@@ -157,7 +155,6 @@ class GameMap extends EventTarget{
 
 	set renderedMaps(value) {
 		this.#renderedMaps = value;
-		console.log('renderedMaps', value);
 		this.dispatchEvent(new CustomEvent("map-rendered", { detail: value }));
 	}
 
@@ -167,7 +164,6 @@ class GameMap extends EventTarget{
 
 	set entryMaps(value) {
 		this.#entryMaps = value;
-		console.log('entryMaps', value);
 		this.dispatchEvent(new CustomEvent("entry-map-rendered", { detail: value }));
 	}
 
@@ -338,7 +334,7 @@ class GameMap extends EventTarget{
 			damage,
 			position,
 			loot;
-		if (this.phase === "move") endPhase = await this.move(clickPosition);
+		if (this.phase === "move") endPhase = await this.move({position:clickPosition});
 		if (this.phase === "action" && this.action === "attack") {
 			[endPhase, damage, position] = await this.attack(clickPosition);
 			// if all enemies are dead, move to 'win' phase
@@ -459,13 +455,13 @@ class GameMap extends EventTarget{
 		this.camera.lookAt(this.map.position);
 		this.camera.updateProjectionMatrix();
 		this.focalPoint.add(this.map);
-		await this.createPanAnimation({endPosition: new Vector3(-24, 24, -24), steps: [
-			new Vector3(-24, 10, -24),
-			new Vector3(24, 10, -24),
-			new Vector3(24, 10, 24),
-			new Vector3(-24, 10, 24),
-			new Vector3(-24, 10, -24),
-		], panStepDuration: 1});
+		// await this.createPanAnimation({endPosition: new Vector3(-24, 24, -24), steps: [
+		// 	new Vector3(-24, 10, -24),
+		// 	new Vector3(24, 10, -24),
+		// 	new Vector3(24, 10, 24),
+		// 	new Vector3(-24, 10, 24),
+		// 	new Vector3(-24, 10, -24),
+		// ], panStepDuration: 1});
 	}
 
 	async startBattle() {
@@ -500,14 +496,14 @@ class GameMap extends EventTarget{
 	}
 
 	#determineInteractible = {
-		action: (range) => {
+		action: async (range = this.currentParticipant.attackRange) => {
 			const tiles =
 				this.currentParticipant.primaryAttack === "melee"
 					? this.hackItOut(this.currentParticipant.tile, range)
 					: this.rangeItOut(this.currentParticipant.tile, range);
 			return Array.from(new Set(tiles));
 		},
-		move: async (range) => {
+		move: async (range = this.currentParticipant.move) => {
 			const [tiles, paths] = await this.walkItOut(
 				this.currentParticipant.tile,
 				range
@@ -666,10 +662,10 @@ class GameMap extends EventTarget{
 		});
 	}
 
-	async move(position) {
+	async move({position, tile = this.intersectedObject.parent}) {
 		const possiblePaths = Array.from(this.movePaths).filter((setPath) => {
 			const path = Array.from(setPath);
-			return path.includes(this.intersectedObject.parent);
+			return path.includes(tile);
 		});
 		const fullPath = Array.from(
 			possiblePaths.find(
@@ -678,7 +674,7 @@ class GameMap extends EventTarget{
 			)
 		);
 		const path = fullPath.reduce((acc, current) => {
-			if (acc[acc.length - 1] === this.intersectedObject.parent) return acc;
+			if (acc[acc.length - 1] === tile) return acc;
 			acc.push(current);
 			return acc;
 		}, []);
@@ -712,11 +708,11 @@ class GameMap extends EventTarget{
 		return "move";
 	}
 
-	async attack(position) {
+	async attack(position, tile=this.intersectedObject.parent) {
 		const victim = this.participants.find(({ avatar }) =>
 			positionEquals(
 				avatar.mesh.userData.childOf.position,
-				this.intersectedObject.parent.position
+				tile.position
 			)
 		);
 		this.lookAt(
@@ -725,8 +721,8 @@ class GameMap extends EventTarget{
 			victim.avatar.mesh.userData.childOf.position
 		);
 
-    await this.currentParticipant.avatar.swapAnimation('punch', {clamp: true, loop: LoopOnce, await: 0.5, onFinish: () => {
-      this.currentParticipant.avatar.swapAnimation('idle');
+    await this.currentParticipant.avatar.swapAnimation('punch', {clamp: true, loop: LoopOnce, await: 0.5, onFinish: async () => {
+      await this.currentParticipant.avatar.swapAnimation('idle');
     }});
 
     if (sameTeam(victim, this.currentParticipant)) console.log("same team");
@@ -822,8 +818,22 @@ class GameMap extends EventTarget{
 		return path;
 	}
 
+	/**
+	 * find the closest interactive tile
+	 * @param {'move'|'action'} type the type of interactive tile
+	 */
+	async closestInteractiveTile(type = 'move', endPosition) {
+		const interactiveTiles = await this.#determineInteractible[type]();
+		const [ closestTile ] = interactiveTiles.sort((tileA, tileB) => tileA.position.distanceTo(endPosition) - tileB.position.distanceTo(endPosition));
+		return closestTile;
+	}
+
+	async farthestInteractiveTile(type = 'move', endPosition) {
+		const [ farthestTile ] = await this.#determineInteractible[type].sort((tileA, tileB) => tileB.position.distanceTo(endPosition) - tileA.position.distanceTo(endPosition));
+		return farthestTile;
+	}
+
 	async performTurn() {
-		return this.endTurn();
 		if (!this.currentParticipant.personality)
 			this.currentParticipant.personality = oneOf([
 				"aggressive",
@@ -837,52 +847,32 @@ class GameMap extends EventTarget{
           attack target
         else
           move towards target
-    */
-		const target = this.currentParticipant.target;
+    	*/
+		let target = this.currentParticipant.target;
 		if (!target) {
 			const targetCandidates = this.participants.filter(
-				(participant) => participant !== this.currentParticipant
+				(participant) => !sameTeam(participant, this.currentParticipant)
 			);
-			const target = oneOf(targetCandidates);
+			target = oneOf(targetCandidates);
 			this.currentParticipant.target = target;
 		}
 		const targetPosition = target.avatar.mesh.userData.childOf.position;
-		const targetDistance = distance(
-			this.currentParticipant.avatar.mesh.userData.childOf.position,
-			targetPosition
-		);
-		if (targetDistance <= this.currentParticipant.range) {
-			return this.attack(targetPosition);
+		const closestActionTile = await this.closestInteractiveTile('action', targetPosition);
+		if(positionEquals(closestActionTile, targetPosition)) {
+			await this.attack(targetPosition, closestActionTile);
+			const farthestMoveTile = await this.farthestInteractiveTile('move', targetPosition);
+			await this.move({position: farthestMoveTile.position, tile: farthestMoveTile});
 		} else {
-			const path = await this.findPath(
-				this.currentParticipant.avatar.mesh.userData.childOf.position,
-				targetPosition
-			);
-			const nextTile = path[1];
-			if (nextTile) {
-				const nextTilePosition = nextTile.position;
-				const nextTileDistance = distance(
-					this.currentParticipant.avatar.mesh.userData.childOf.position,
-					nextTilePosition
-				);
-				if (nextTileDistance <= this.currentParticipant.move) {
-					return this.move(nextTilePosition);
-				}
-				await this.initiateAttack();
-				const charactersInRange = characters.filter((character) =>
-					this.interactible.find((tile) => character.tile === tile)
-				);
-				if (
-					this.currentParticipant.target &&
-					charactersInRange.find(
-						(character) => character === this.currentParticipant.target
-					)
-				) {
-				}
-				// if (this.currentParticipant.personality === 'aggressive') {
-				// }
-			}
+			const closestMoveTile = await this.closestInteractiveTile('move', targetPosition);
+			await this.move({position: closestMoveTile.position, tile: closestMoveTile});
+			const closestActionTile = await this.closestInteractiveTile('action', targetPosition);
+			if(positionEquals(closestActionTile.position, targetPosition)) await this.attack(targetPosition, closestActionTile);
 		}
+		
+		if(characters.allDead) {
+			endPhase = 'lose';
+		}
+		return this.endTurn();
 	}
 
 	/**

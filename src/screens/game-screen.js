@@ -144,11 +144,13 @@ class GameScreen extends LitElement {
   }
 
   async canvasClick({ x, y }) {
-    if (this.nonClick) return (this.nonClick = false);
+    if (this.nonClick || this._processingClick) return (this.nonClick = false);
+    this._processingClick = true;
     const { clickPosition, childCount, endPhase, damage, position, loot } = await this.gameMap.mapClick({
       x,
       y,
     });
+    this._processingClick = false;
     if (!this.commenced) {
       if (childCount) return this.gameMap.removeChildren();
       const characterIndex = await this.chooseCharacter().catch(() => null);
@@ -169,6 +171,10 @@ class GameScreen extends LitElement {
     if(endPhase === 'win') {
       alert('You win!');
       this.dispatchEvent(new CustomEvent('game-win', { detail: { loot } }));
+    }
+    if(endPhase === 'lose') {
+      alert('You lose!');
+      this.dispatchEvent(new CustomEvent('game-lose'))
     }
   }
 
