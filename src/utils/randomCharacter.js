@@ -1,4 +1,4 @@
-import { Character } from '../character.js';
+import { Character } from '../services/Character.js';
 import { oneOf } from './oneOf.js';
 
 const names = [

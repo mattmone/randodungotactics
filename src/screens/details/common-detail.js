@@ -1,4 +1,4 @@
-import { html } from 'lit-element';
+import { html } from 'lit';
 import { dieDisplay } from 'utils/dieDisplay.js';
 
 export const durabilityTemplate = item =>

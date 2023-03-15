@@ -1,11 +1,11 @@
 import { rollDice } from '../utils/rollDice.js';
-import { get, set, createStore, del } from '../../libs/idb-keyval.js';
-import { Initializeable } from '../utils/baseClasses/initializable.js';
+import { get, set, createStore, del } from '../libs/idb-keyval.js';
+import { Initializable } from '../utils/baseClasses/Initializable.js';
 
 /** @type {IDBObjectStore} */
 const idbStore = createStore('items', 'itemStore');
 
-export class Item extends Initializeable {
+export class Item extends Initializable {
   /** @type {Timeout} */
   #saveTimeout = null;
   /** @type {Date} */

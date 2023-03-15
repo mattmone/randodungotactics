@@ -1,5 +1,5 @@
-import { LitElement, html, css } from 'lit-element';
-import { Crew } from '../services/crew.js';
+import { LitElement, html, css } from 'lit';
+import { Crew } from '../services/Crew.js';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
 import { Activatable} from "../utils/mixins/activatable.js";

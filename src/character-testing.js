@@ -19,7 +19,7 @@ import {
   Clock,
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Character } from './character.js';
+import { Character } from './services/Character.js';
 
 // obj - your object (THREE.Object3D or derived)
 // point - the point of rotation (THREE.Vector3)

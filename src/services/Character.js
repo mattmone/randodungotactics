@@ -27,7 +27,7 @@
  * @property {Position} [position]
  * @property {Map<string, number>} [effects]
  * @property {Map<string, number>} [modifiers]
- * @property {Map<string, import('./items/Item.js').Item>} [equipment]
+ * @property {Map<string, import('../items/Item.js').Item>} [equipment]
  * @property {Number} [direction]
  * @property {Number} [hp]
  * @property {Number} [mana]
@@ -37,25 +37,25 @@
  * @property {Number} y
  * @property {Number} z
  */
-import { DIRECTION } from './constants/directions.js';
+import { DIRECTION } from '../constants/directions.js';
 
 import { Avatar } from './Avatar.js';
 import { get, set, del, createStore } from '../libs/idb-keyval.js';
-import { Weapon } from './items/Weapon.js';
-import { Body } from './items/Body.js';
-import { Hands } from './items/Hands.js';
-import { Head } from './items/Head.js';
-import { Boots } from './items/Boots.js';
-import { Item } from './items/Item.js';
+import { Weapon } from '../items/Weapon.js';
+import { Body } from '../items/Body.js';
+import { Hands } from '../items/Hands.js';
+import { Head } from '../items/Head.js';
+import { Boots } from '../items/Boots.js';
+import { Item } from '../items/Item.js';
 
-import { skillModifier } from './utils/skillModifier.js';
-import { statModifier } from './utils/statModifier.js';
-import { LoopOnce } from './libs/three.module.js';
-import { Initializeable } from './utils/baseClasses/initializable.js';
+import { skillModifier } from '../utils/skillModifier.js';
+import { statModifier } from '../utils/statModifier.js';
+import { LoopOnce } from '../libs/three.module.js';
+import { Initializable } from '../utils/baseClasses/Initializable.js';
 
 const idbStore = createStore('characters', 'characterStore');
 
-export class Character extends Initializeable {
+export class Character extends Initializable {
   /** @type {Timeout} */
   #saveTimeout = null;
   /** @type {string} */
@@ -72,7 +72,7 @@ export class Character extends Initializeable {
   #effects;
   /** @type {Map<string, number>} */
   #modifiers;
-  /** @type {Map<string, import('./items/Item.js').Item>} */
+  /** @type {Map<string, import('../items/Item.js').Item>} */
   #equipment;
   /** @type {Number} */
   #direction;
@@ -92,12 +92,10 @@ export class Character extends Initializeable {
     name = '',
     colorOffset = {},
     stats = new Map([
-      ['strength', { level: 1, progression: 1 }],
-      ['dexterity', { level: 1, progression: 1 }],
-      ['constitution', { level: 1, progression: 1 }],
-      ['speed', { level: 1, progression: 1 }],
-      ['intellect', { level: 1, progression: 1 }],
-      ['magic', { level: 1, progression: 1 }],
+      ['strength', { level: 1, progression: 0 }],
+      ['dexterity', { level: 1, progression: 0 }],
+      ['constitution', { level: 1, progression: 0 }],
+      ['intellect', { level: 1, progression: 0 }],
     ]),
     skills = new Map(),
     position = false,
@@ -157,7 +155,7 @@ export class Character extends Initializeable {
   }
 
   async #hydrate(id) {
-    const character = await get(id, idbStore);
+    const character = await get(id, idbStore) || {};
     this.#initialize(character);
   }
 
@@ -165,8 +163,8 @@ export class Character extends Initializeable {
     id,
     name,
     colorOffset,
-    stats,
-    skills,
+    stats = baseStats,
+    skills = new Map(),
     position,
     effects,
     modifiers,
@@ -188,17 +186,17 @@ export class Character extends Initializeable {
     this.equipment = new Map(
       equipment
         ? await Promise.all(
-            Array.from(equipment.entries())
-              .filter(([key, value]) => value)
-              .map(async ([key, value]) => [key, await Item.retrieve(value)]),
-          )
+          Array.from(equipment.entries())
+            .filter(([key, value]) => value)
+            .map(async ([key, value]) => [key, await Item.retrieve(value)]),
+        )
         : [],
     );
     this.direction = direction;
     this.hp = hp;
     this.mana = mana;
     this.#created = created;
-    this._initialized = true;
+    this.dispatchEvent(new Event('initialize'));
   }
 
   #saveCharacter() {
@@ -230,6 +228,26 @@ export class Character extends Initializeable {
   set stats(stats) {
     this.#stats = stats;
     this.#saveCharacter();
+  }
+  get strength() {
+    return this.#stats.get('strength');
+  }
+  get dexterity() {
+    return this.#stats.get('dexterity');
+  }
+  get constitution() {
+    return this.#stats.get('constitution');
+  }
+  get intellect() {
+    return this.#stats.get('intellect');
+  }
+  /** @type {ProgressionStructure} */
+  get magic() {
+    return { level: Math.round((this.constitution.level + this.intellect.level) / 2) };
+  }
+  /** @type {ProgressionStructure} */
+  get speed() {
+    return { level: Math.round((this.strength.level + this.dexterity.level) / 2) };
   }
   get skills() {
     return this.#skills;
@@ -345,7 +363,6 @@ export class Character extends Initializeable {
   get maxhp() {
     return (
       this.stats.get('constitution').level * 10 +
-      this.stats.get('strength').level * 5 +
       (this.modifiers.hp ?? 0)
     );
   }
@@ -354,7 +371,6 @@ export class Character extends Initializeable {
   get maxmana() {
     return (
       this.stats.get('intellect').level * 10 +
-      this.stats.get('magic').level * 5 +
       (this.modifiers.mana ?? 0)
     );
   }
@@ -411,7 +427,7 @@ export class Character extends Initializeable {
   get handsFull() {
     return (
       (this.equipment.get('primary hand')?.hands || 0) +
-        (this.equipment.get('secondary hand')?.hands || 0) >=
+      (this.equipment.get('secondary hand')?.hands || 0) >=
       2
     );
   }
@@ -475,8 +491,8 @@ export class Character extends Initializeable {
   /**
    * equip an item to the character
    * @param {string} category the category of the item to equip
-   * @param {import('./items/Item.js').Item} item the Item to equip
-   * @returns {null|import('./items/Item.js').Item} the item that was removed or null
+   * @param {import('../items/Item.js').Item} item the Item to equip
+   * @returns {null|import('../items/Item.js').Item} the item that was removed or null
    */
   equip(category, item) {
     if (!(item instanceof Item)) item = Item.retrieve(item);
@@ -489,7 +505,7 @@ export class Character extends Initializeable {
   /**
    * unequip an item from the character
    * @param {string} category the category of the item to unequip
-   * @returns {import('./items/Item.js').Item} the item that was removed or null
+   * @returns {import('../items/Item.js').Item} the item that was removed or null
    */
   unequip(category) {
     const removedItem = this.equipment.get(category);

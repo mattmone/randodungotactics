@@ -24,8 +24,8 @@ import { makeMap } from "../utils/makeMap.js";
 import { createTerrainSide } from "../utils/createTerrainSide.js";
 import { rollDice } from "../utils/rollDice.js";
 import { oneOf } from "../utils/oneOf.js";
-import { Character } from "../character.js";
-import { Crew } from "../services/crew.js";
+import { Character } from "../services/Character.js";
+import { Crew } from "../services/Crew.js";
 import { initScene } from "../utils/initScene.js";
 
 const characters = new Crew();

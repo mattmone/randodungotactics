@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RandDungo 3D</title>
+    <script type="importmap">
+        {
+          "imports": {
+            "lit": "https://cdn.jsdelivr.net/gh/lit/dist@2/core/lit-core.min.js",
+            "@babylonjs/": "https://cdn.jsdelivr.net/npm/@babylonjs/",
+            "three": "../libs/three.module.js",
+            "styles": "../styles"
+          }
+        }
+    </script>
+    <script type="module" src="./dungo.js"></script>
+    <script type="module" src="./opening-screen.js"></script>
+    <script type="module" src="../screens/character-content.js"></script>
+    <style>
+      @import url('../styles/common.styles.css');
+      @import url('../styles/button.styles.css');
+      @import url('../styles/custom-properties.css');
+        /* vietnamese */
+      @font-face {
+        font-family: 'VT323';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(../font/vt323.woff2) format('woff2');
+        unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+      }
+
+      /* latin-ext */
+      @font-face {
+        font-family: 'VT323';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(../font/vt323.woff2) format('woff2');
+        unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+
+      /* latin */
+      @font-face {
+        font-family: 'VT323';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url(../font/vt323.woff2) format('woff2');
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      * { box-sizing: border-box; }
+      html {
+        width: 100%;
+        align-items: center;
+      }
+      html, body, .screen {
+        height:100%;
+      }
+      body {
+        aspect-ratio: 393 / 851;
+      }
+      html,body,main, .screen {
+        background:var(--primary-dark);
+        color: var(--primary-color);
+        display: flex;
+        flex-direction:column;
+        flex:1;
+        gap:8px;
+        margin:0;
+        padding:0;
+      }
+
+      section {
+        display:flex;
+        flex-direction:column;
+        gap: 8px;
+      }
+      .screen {
+        padding:0 8px;
+        container-name: screen;
+        container-type: size;
+      }
+      #name-field {
+        display:flex;
+        flex-direction:column;
+        flex:1;
+        justify-content:center;
+      }
+      #name-field label {
+        display:flex;
+        flex-direction:column;
+      }
+      header {
+        border-bottom:1px solid var(--primary-white);
+        padding:8px;
+      }
+      h1 {
+        color:var(--primary-white);
+        margin:0;
+        text-align:center;
+      }
+      h2 {
+        border-bottom:1px solid var(--primary-white);
+        color:var(--primary-white);
+        font-weight:300;
+        margin:0;
+      }
+      character-demographics {
+        display:flex;
+        gap: 8px;
+      }
+      #avatar {
+        aspect-ratio: 1 / 1;
+        width:128px;
+      }
+      input {
+        background:none;
+        border:none;
+        border-bottom: 1px solid var(--primary-white);
+        color:var(--primary-white);
+        flex:1;
+        font-size:32px;
+        width:100%;
+      }
+      #enter-dungeon, opening-screen button {
+        border-width: 2px;
+        font-size:9cqi;
+        font-weight: 900;
+        justify-content: center;
+        letter-spacing: 3cqi;
+        text-indent: 3cqi;
+        text-transform: uppercase;
+      }
+      character-stats {
+        display:grid;
+        gap:4px;
+        grid-template-columns:1fr 1fr 1fr 1fr;
+      }
+      character-stat {
+        align-items:center;
+        aspect-ratio: 1 / 1;
+        background: rgba(255,255,255,0.1);
+        border-radius:var(--border-radius);
+        display:flex;
+        flex-direction:column;
+        font-size:6cqi;
+        gap:8px;
+        justify-content:center;
+        text-transform:uppercase;
+      }
+      character-equipment {
+        display:flex;
+        flex-direction:column;
+      }
+    </style>
+</head>
+<body>
+  <header>
+    <h1>Rando Dungo</h1>
+  </header>
+  <main>
+    <opening-screen class="screen">
+      <button id="continue" disabled>Continue</button>
+      <button id="new">New Game</button>
+      <button id="options">Options</button>
+      <button id="about">About</button>
+    </opening-screen>
+    <character-content class="screen" hidden>
+      <button id="enter-dungeon" class="center">Enter Dungeon</button>
+    </character-content>
+    <game-screen class="screen" hidden></game-screen>
+  </main>
+</body>
+</html>

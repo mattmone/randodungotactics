@@ -1,7 +1,7 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from 'lit';
 import { buttonStyles } from '../styles/button.styles.js';
 import { commonStyles } from '../styles/common.styles.js';
-import { progressStyles } from 'styles/progress.styles.js';
+import { progressStyles } from '../styles/progress.styles.js';
 import { selectorStyles } from '../styles/selector.styles.js';
 import { dieDisplay } from '../utils/dieDisplay.js';
 import { Activatable } from '../utils/mixins/activatable.js';
@@ -152,11 +152,7 @@ class CharacterContent extends Activatable(LitElement) {
       };
       const avatarCanvas = this.shadowRoot.getElementById('avatar');
       const avatarContext = avatarCanvas.getContext('bitmaprenderer');
-      renderAvatar(avatarContext, () =>
-        this.hasAttribute('recruits')
-          ? this.character.avatar.image
-          : this.player.memberAvatarImage(this.character.id),
-      );
+      renderAvatar(avatarContext, () => this.character.avatar.image);
     }
   }
 
@@ -215,6 +211,7 @@ class CharacterContent extends Activatable(LitElement) {
           <div class="stat"><span>range</span><span>${this.character.attackRange}</span></div>
         </div>
       </div>
+      <slot></slot>
       <div class="selector">
         <button ?selected=${this.category === 'stats'} @click=${this.categorySelect('stats')}>
           Stats
@@ -233,7 +230,7 @@ class CharacterContent extends Activatable(LitElement) {
         <stats-content ?hidden=${this.category !== 'stats'}>
           ${Array.from(this.character.stats.entries()).map(([stat, { level, progression }]) =>
             statBoxTemplate(stat, level, progression),
-          )}]))}
+          )}
         </stats-content>
         <skills-content ?hidden=${this.category !== 'skills'}>
           ${Array.from(this.character.skills.entries()).map(([skill, { level, progression }]) =>

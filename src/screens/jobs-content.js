@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from 'lit';
 import { oneOf } from 'utils/oneOf.js';
 import { mapTypes } from 'constants/mapTypes.js';
 import { buttonStyles } from 'styles/button.styles.js';

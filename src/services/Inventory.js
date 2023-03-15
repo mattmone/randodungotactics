@@ -1,8 +1,8 @@
 import { get, set } from '../../libs/idb-keyval.js';
 import { Item } from '../items/Item.js';
-import { Initializeable } from '../utils/baseClasses/initializable.js';
+import { Initializable } from '../utils/baseClasses/Initializable.js';
 
-export class Inventory extends Initializeable {
+export class Inventory extends Initializable {
   #items = [];
   #saveTimeout = null;
   #dungocoin = 0;

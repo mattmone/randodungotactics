@@ -1,10 +1,10 @@
-import { Character } from '../character.js';
+import { Character } from './Character.js';
 import { oneOf } from '../utils/oneOf.js';
-import { get, set, del } from '../../libs/idb-keyval.js';
+import { get, set, del } from '../libs/idb-keyval.js';
 import { rollDice } from '../utils/rollDice.js';
-import { Initializeable } from '../utils/baseClasses/initializable.js';
+import { Initializable } from '../utils/baseClasses/Initializable.js';
 
-export class Crew extends Initializeable {
+export class Crew extends Initializable {
   /** @type {Character[]} */
   #members = [];
   #saveCrewTimeout = null;
@@ -14,13 +14,17 @@ export class Crew extends Initializeable {
     this.id = id;
     if (clean) {
       del(`crew/${id}`);
-      this._initialized = true;
+      this.dispatchEvent(new Event('initialize'));
     } else
       get(`crew/${id}`).then(async crew => {
         if (crew) this.#members = crew.map(member => new Character({ id: member }));
         await Promise.all(this.#members.map(member => member.initialized));
-        this._initialized = true;
+        this.dispatchEvent(new Event('initialize'));
       });
+  }
+
+  get leader() {
+    return this.#members[0];
   }
 
   get members() {
@@ -68,7 +72,7 @@ export class Crew extends Initializeable {
 
   remove(removedMember, nonDestructive) {
     this.#members = this.members.filter(member => member.id !== removedMember.id);
-    if (!nonDestructive) removedMember.destroy();
+    if (!nonDestructive && removedMember) removedMember.destroy();
     this.#saveCrew();
   }
 

@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from 'lit';
 import { commonStyles } from 'styles/common.styles.js';
 import { buttonStyles } from 'styles/button.styles.js';
 import { progressStyles } from 'styles/progress.styles.js';

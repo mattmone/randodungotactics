@@ -25,10 +25,13 @@
   },
   "homepage": "https://github.com/mattmone/randodungotactics#readme",
   "devDependencies": {
+    "@esm-bundle/chai": "^4.3.4-fix.0",
     "@web/dev-server": "^0.1.31",
+    "@web/test-runner": "^0.14.0",
     "wireit": "^0.4.3"
   },
   "dependencies": {
+    "@web/test-runner-puppeteer": "^0.10.5",
     "comlink": "^4.3.1",
     "idb-keyval": "^6.0.3",
     "three": "^0.140.2"

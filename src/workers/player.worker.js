@@ -1,7 +1,7 @@
 import { expose } from '../../libs/comlink.min.js';
-import { Crew } from '../services/crew.js';
+import { Crew } from '../services/Crew.js';
 import { Inventory } from '../services/Inventory.js';
-import { Initializeable } from '../utils/baseClasses/initializable.js';
+import { Initializable } from '../utils/baseClasses/Initializable.js';
 
 // start them up immediately on worker instantiation
 const _crew = new Crew();
@@ -11,7 +11,7 @@ _crew.members.forEach(async member => {
   member.avatar.renderAvatar();
 });
 
-class PlayerSharedWorker extends Initializeable {
+class PlayerSharedWorker extends Initializable {
   #crew = _crew;
   #inventory = _inventory;
 

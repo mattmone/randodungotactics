@@ -1,4 +1,4 @@
-import { LitElement, html } from 'lit-element';
+import { LitElement, html } from 'lit';
 import { detailStyles } from 'styles/detail.styles.js';
 import { commonStyles } from 'styles/common.styles.js';
 import { gemsTemplate, statTemplate, effectsTemplate } from './common-detail.js';

@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit-element';
+import { LitElement, html, css } from 'lit';
 import { dieDisplay } from 'utils/dieDisplay.js';
 import { detailStyles } from 'styles/detail.styles.js';
 import { commonStyles } from 'styles/common.styles.js';

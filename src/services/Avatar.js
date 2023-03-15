@@ -1,12 +1,12 @@
-import { initScene } from "../../utils/initScene.js";
-import { AnimationMixer, Clock } from "../../libs/three.module.js";
-import { GLTFLoader } from "../../libs/GLTFLoader.js";
-import { Initializeable } from "./utils/baseClasses/initializable.js";
+import { initScene } from "../utils/initScene.js";
+import { AnimationMixer, Clock } from "../libs/three.module.js";
+import { GLTFLoader } from "../libs/GLTFLoader.js";
+import { Initializable } from "../utils/baseClasses/Initializable.js";
 // import {
 //   DRACOLoader
 // } from "../../libs/DRACOLoader.js";
 
-export class Avatar extends Initializeable {
+export class Avatar extends Initializable {
 	#colorOffset = {};
 	#currentAnimation = "idle";
 
@@ -88,7 +88,7 @@ export class Avatar extends Initializeable {
 	 */
 	async renderAvatar(avatarOpts = {}) {
     const { colorOffset = this.#colorOffset } = avatarOpts;
-		if(this._initialized && !avatarOpts.rerender) return;
+		if(this.isInitialized && !avatarOpts.rerender) return;
 
 		const loader = new GLTFLoader();
 		// const dracoLoader = new DRACOLoader();
@@ -159,7 +159,7 @@ export class Avatar extends Initializeable {
 			);
 		});
 
-    if(avatarOpts.meshInit) return this._initialized = true;
+    if(avatarOpts.meshInit) return this.dispatchEvent(new Event('initialize'));
 
 		this.mesh.userData.type = "avatar";
 		const scale = 4;
@@ -185,7 +185,7 @@ export class Avatar extends Initializeable {
 			model.userData.animations.mixer.update(
 				model.userData.animations.clock.getDelta()
 			);
-			this._initialized = true;
+			this.dispatchEvent(new Event('initialize'));
 			resolve(model);
 		});
 	}
