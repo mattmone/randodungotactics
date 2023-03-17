@@ -7,14 +7,14 @@ import { surroundingPositions } from "../utils/surroundingPositions.js";
 import { directionModifier } from "../utils/directionModifier.js";
 
 export class DungeonMap extends IdbBacked {
+  /** @type {Array.<Room>} */
+  #rooms = []
   constructor(id = crypto.randomUUID(), terrain = "rock") {
     super(id);
     this.id = id;
     this.terrain = terrain;
     /** @type {Array.<FloorTile>} */
     this.floorTiles = [];
-    /** @type {Array.<Room>} */
-    this.rooms = [];
   }
 
   static get serialized() {
@@ -23,6 +23,10 @@ export class DungeonMap extends IdbBacked {
       rooms: IdbBacked.Array(Room),
       terrain: true
     }
+  }
+
+  get rooms() {
+    return this.#rooms;
   }
 
   #checkForNearbyRoom(position) {
@@ -65,13 +69,14 @@ export class DungeonMap extends IdbBacked {
     return floorTileCoordinates;
   }
 
-  #nudgeIfNeeded(roomDetails, nudgeDirection) {
-    while(this.#roomOverlaps(roomDetails)) {
-      const {x, z} = this.#move(roomDetails, nudgeDirection);
-      roomDetails.x = newRoomCenter.x;
-      roomDetails.z = newRoomCenter.z;
-      roomDetails.entranceLength++
-    }
+  #roomOverlaps(room) {
+    return this.#rooms.some(exisitingRoom => 
+      exisitingRoom.floorTile.some(exisitingFloorTile => 
+        room.floorTile.some(floorTile => 
+          floorTile.at(exisitingFloorTile.x, exisitingFloorTile.z)
+        )
+      )
+    )
   }
 
   async generateRoom(
@@ -80,7 +85,7 @@ export class DungeonMap extends IdbBacked {
     exits = rollDice(5)-1,
     entrance = {
       fromDirection: DIRECTION.NORTH,
-      position: { x: 0, y: 0, z: 0 },
+      coordinates: [{ x: 0, y: 0, z: 0 }]
     }
   ) {
     if (this.#check(entrance.position, OPPOSITE_DIRECTION[fromDirection]))
@@ -88,16 +93,20 @@ export class DungeonMap extends IdbBacked {
     const roomDetails = {
       x: entrance.position.x + directionModifier(entrance.fromDirection)*width,
       z: entrance.position.z + directionModifier(entrance.fromDirection)*length,
-      entranceLength: 1,
+      entrance,
       width,
       length
     };
-    this.#nudgeIfNeeded(roomDetails, OPPOSITE_DIRECTION[fromDirection])
+    let room = new Room(null, this.id, roomDetails);
 
-    const room = new Room(null, this.id, roomDetails);
+    if(this.#roomOverlaps(room)) {
+      room.dispatchEvent(new Event('destroy'));
+      room = new Room(null, this.id, { ...roomDetails, width: 0, length:0 })
+    }
+  
 
     const possibleExits = this.#determineRoomExits(room, entrance.fromDirection)
-    this.#rooms.add(room);
+    this.#rooms.push(room);
     return room;
   }
 }
