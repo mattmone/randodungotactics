@@ -1,4 +1,4 @@
-import { get, set } from '../../libs/idb-keyval.js';
+import { get, set } from '../libs/idb-keyval.js';
 import { Item } from '../items/Item.js';
 import { Initializable } from '../utils/baseClasses/Initializable.js';
 

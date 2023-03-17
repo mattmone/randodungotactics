@@ -1,6 +1,6 @@
 import { LitElement, html } from 'lit';
-import { detailStyles } from 'styles/detail.styles.js';
-import { commonStyles } from 'styles/common.styles.js';
+import { detailStyles } from '../styles/detail.styles.js';
+import { commonStyles } from '../styles/common.styles.js';
 import { statTemplate, effectsTemplate } from './common-detail.js';
 
 class GemDetail extends LitElement {

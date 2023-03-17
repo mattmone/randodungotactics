@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
-import { commonStyles } from 'styles/common.styles.js';
-import { buttonStyles } from 'styles/button.styles.js';
+import { commonStyles } from '../styles/common.styles.js';
+import { buttonStyles } from '../styles/button.styles.js';
 
 class DetailContent extends LitElement {
   static get styles() {

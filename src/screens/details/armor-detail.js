@@ -1,8 +1,8 @@
 import { LitElement, html } from 'lit';
 import { dieDisplay } from 'utils/dieDisplay.js';
-import { detailStyles } from 'styles/detail.styles.js';
-import { commonStyles } from 'styles/common.styles.js';
-import { progressStyles } from 'styles/progress.styles.js';
+import { detailStyles } from '../styles/detail.styles.js';
+import { commonStyles } from '../styles/common.styles.js';
+import { progressStyles } from '../styles/progress.styles.js';
 import { durabilityTemplate, gemsTemplate, statTemplate, effectsTemplate } from './common-detail.js';
 
 class ArmorDetail extends LitElement {

@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { oneOf } from 'utils/oneOf.js';
 import { mapTypes } from 'constants/mapTypes.js';
-import { buttonStyles } from 'styles/button.styles.js';
+import { buttonStyles } from '../styles/button.styles.js';
 
 class JobsContent extends LitElement {
   static get styles() {

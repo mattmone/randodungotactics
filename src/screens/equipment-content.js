@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
-import { buttonStyles } from 'styles/button.styles.js';
-import { commonStyles } from 'styles/common.styles.js';
+import { buttonStyles } from '../styles/button.styles.js';
+import { commonStyles } from '../styles/common.styles.js';
 import { UsesPlayer } from '../utils/mixins/usesPlayer.js';
 
 const mappings = {

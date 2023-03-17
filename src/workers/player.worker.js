@@ -1,4 +1,4 @@
-import { expose } from '../../libs/comlink.min.js';
+import { expose } from '../libs/comlink.min.js';
 import { Crew } from '../services/Crew.js';
 import { Inventory } from '../services/Inventory.js';
 import { Initializable } from '../utils/baseClasses/Initializable.js';

@@ -94,11 +94,12 @@ export class Avatar extends Initializable {
 		// const dracoLoader = new DRACOLoader();
 		// dracoLoader.setDecoderPath("/libs/draco/gltf/");
 		// loader.setDRACOLoader(dracoLoader);
-
+		const avatarUrl = new URL("../models/vox-character.glb", import.meta.url).toString();
+		console.log(avatarUrl);
 		this.mesh = await new Promise((resolve, reject) => {
 			loader.load(
 				// resource URL
-				"../models/vox-character.glb",
+				avatarUrl,
 				// called when the resource is loaded
 				function (gltf) {
 					gltf.scene.traverse((object) => {

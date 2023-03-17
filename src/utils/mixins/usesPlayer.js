@@ -1,6 +1,6 @@
 import { wrap } from 'comlink';
 
-const playerWorker = new SharedWorker('/workers/player.worker.js', { type: 'module' });
+const playerWorker = new SharedWorker(new URL('../../workers/player.worker.js', import.meta.url), { type: 'module' });
 const Player = wrap(playerWorker.port);
 
 export const UsesPlayer = superclass =>
