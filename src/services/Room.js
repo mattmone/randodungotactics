@@ -10,9 +10,17 @@ class generateFloorTileEvent extends Event {
 }
 
 export class Room extends IdbBacked {
-  constructor(id = crypto.randomUUID(), mapid, details) {
+  constructor(id = crypto.randomUUID(), mapid, {x, y, width, length, entrance}) {
     super(id);
     this.mapid = mapid;
+    const floorTileCoordinates = [];
+
+    for (let w = -width; w <= width; w++) {
+      for (let l = -length; l <= length; l++) {
+        floorTileCoordinates.push(this.#generateFloorBox({ x: w+x, z: l+z }));
+      }
+    }
+    floorTileCoordinates.push(...entrance.coordinates)
     this.floorTiles = Promise.all(floorTileCoordinates.map(this.generateFloorTile)).then(floorTiles => {
       this.dispatchEvent(new Event('room-generated'));
       return floorTiles;
