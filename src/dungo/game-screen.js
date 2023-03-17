@@ -29,6 +29,7 @@ import { oneOf } from "../utils/oneOf.js";
 import { copyVector } from "../utils/copyVector.js";
 import { rollDice } from "../utils/rollDice.js";
 import { DIRECTION, OPPOSITE_DIRECTION } from '../constants/directions.js';
+import { DungeonMap } from "../services/DungeonMap.js";
 const ACTION = {
   MOVE: "move",
   OPEN: "open",
@@ -50,6 +51,7 @@ class GameScreen extends LitElement {
   #scene;
   #camera;
   #renderer;
+  #map = new DungeonMap();
   #aspect;
   #directionalLight;
   #ambientLight;
@@ -57,7 +59,6 @@ class GameScreen extends LitElement {
   #raycaster = new Raycaster();
   #mousePosition = new Vector2();
   #focalPoint = new Object3D();
-  #rooms = new Group();
   #animationCollection = new AnimationCollection();
 
   static get styles() {
@@ -92,28 +93,15 @@ class GameScreen extends LitElement {
       ambientLight: this.#ambientLight,
     } = initScene(this.#canvas));
 
-    const room = await this.generateRoom(rollDice(3, 2), rollDice(3, 2), {
+    this.renderRoom(await this.#map.generateRoom(rollDice(3, 2), rollDice(3, 2), {
       exits: { count: 1 },
-    });
-    this.#rooms.add(room);
-    this.#scene.add(this.#rooms);
+    }));
+
     this.playerCrew.leader.avatar.mesh.position.set(0, 0, 0);
     this.playerCrew.leader.avatar.mesh.scale.set(0.05, 0.05, 0.05);
     this.#scene.add(this.playerCrew.leader.avatar.mesh);
     this.#focalPoint.add(this.#camera);
     this.#scene.add(this.#focalPoint);
-
-    // {
-    //   const north = new Mesh(new BoxGeometry(), new MeshBasicMaterial({color: 0xff0000}));
-    //   north.position.set(0,0,-10);
-    //   const south = new Mesh(new BoxGeometry(), new MeshBasicMaterial({color: 0x0000ff}));
-    //   south.position.set(0,0,10);
-    //   const west = new Mesh(new BoxGeometry(), new MeshBasicMaterial({color: 0xff00ff}));
-    //   west.position.set(10,0,0);
-    //   const east = new Mesh(new BoxGeometry(), new MeshBasicMaterial({color: 0xffff00}));
-    //   east.position.set(-10,0,0);
-    //   this.#scene.add(north, south, east, west);
-    // }
 
     this.#camera.position.set(10, 10, 10);
     this.#camera.zoom = 12;
@@ -177,19 +165,12 @@ class GameScreen extends LitElement {
   }
 
   /**
-   * genwwerate a room
-   * @param {number} width the width of the room
-   * @param {number} length the length of the room
-   * @param {RoomOptions} [options] extra options for the room
+   * render a room
+   * @param {import('../services/Room.js').Room} room
    * @returns {Group} the rooms meshes in a Group
    */
-  async generateRoom(width = 3, length = 2, options = {}) {
+  async renderRoom(room) {
     const group = new Group();
-    for (let w = -width; w <= width; w++) {
-      for (let l = -length; l <= length; l++) {
-        group.add(this.#generateFloorBox({ x: w, z: l }));
-      }
-    }
     if (options.entrance) {
       const startingPosition = copyVector(options.entrance.position).add(
         options.entrance.parent.position
@@ -206,7 +187,7 @@ class GameScreen extends LitElement {
           : startingPosition.z
       );
     }
-    // if (options.exits) group.add(...this.#determineRoomExits(options.exits, width, length, group));
+    if (options.exits) group.add(...this.#determineRoomExits(options.exits, width, length, group));
     return group;
   }
 
