@@ -4,25 +4,33 @@ import { FloorTile } from "./FloorTile.js";
 
 class generateFloorTileEvent extends Event {
   constructor(floorTile) {
-    super('generateFloorTile');
+    super("generateFloorTile");
     this.floorTile = floorTile;
   }
 }
 
 export class Room extends IdbBacked {
-  constructor(id = crypto.randomUUID(), mapid, {x, y, width, length, entrance}) {
+  constructor(
+    id = crypto.randomUUID(),
+    mapid,
+    { x, y, width, length, entrance }
+  ) {
     super(id);
     this.mapid = mapid;
     const floorTileCoordinates = [];
 
     for (let w = -width; w <= width; w++) {
       for (let l = -length; l <= length; l++) {
-        floorTileCoordinates.push(this.#generateFloorBox({ x: w+x, z: l+z }));
+        floorTileCoordinates.push(
+          this.#generateFloorBox({ x: w + x, z: l + z })
+        );
       }
     }
-    floorTileCoordinates.push(...entrance.coordinates)
-    this.floorTiles = Promise.all(floorTileCoordinates.map(this.generateFloorTile)).then(floorTiles => {
-      this.dispatchEvent(new Event('room-generated'));
+    floorTileCoordinates.push(...entrance.coordinates);
+    this.floorTiles = Promise.all(
+      floorTileCoordinates.map(this.generateFloorTile)
+    ).then((floorTiles) => {
+      this.dispatchEvent(new Event("room-generated"));
       return floorTiles;
     });
   }
@@ -31,15 +39,32 @@ export class Room extends IdbBacked {
     return {
       mapid: true,
       walls: true,
-      floorTiles: IdbBacked.Array(FloorTile)
-    }
+      floorTiles: IdbBacked.Array(FloorTile),
+    };
   }
 
   wall(direction) {
-    if([DIRECTION.SOUTH, DIRECTION.WEST].includes(direction))
-      return Math.max(...this.floorTiles.map(floorTile => direction === DIRECTION.SOUTH ? floorTile.z : floorTile.x));
+    if ([DIRECTION.SOUTH, DIRECTION.WEST].includes(direction))
+      return Math.max(
+        ...this.floorTiles.map((floorTile) =>
+          direction === DIRECTION.SOUTH ? floorTile.z : floorTile.x
+        )
+      );
     else
-      return Math.min(...this.floorTiles.map(floorTile => direction === DIRECTION.NORTH ? floorTile.z : floorTile.x));
+      return Math.min(
+        ...this.floorTiles.map((floorTile) =>
+          direction === DIRECTION.NORTH ? floorTile.z : floorTile.x
+        )
+      );
+  }
+
+  wallTiles(direction) {
+    return this.floorTiles.filter(
+      (tile) =>
+        tile[
+          [DIRECTION.NORTH, DIRECTION.SOUTH].includes(direction) ? "z" : "x"
+        ] === walls(direction)
+    );
   }
 
   get allWalls() {
@@ -48,7 +73,7 @@ export class Room extends IdbBacked {
       south: this.wall(DIRECTION.SOUTH),
       east: this.wall(DIRECTION.EAST),
       west: this.wall(DIRECTION.WEST),
-    }
+    };
   }
 
   async generateFloorTile(position) {
