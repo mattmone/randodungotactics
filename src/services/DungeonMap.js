@@ -38,7 +38,7 @@ export class DungeonMap extends IdbBacked {
 
   #verifyExitPossibility(direction, room) {}
 
-  #check(position, direction) {
+  #check(position = {x: 0, z: 0}, direction) {
     const adjacentPositions = surroundingPositions(position);
     return this.floorTiles.find((floorTile) =>
       floorTile.at(adjacentPositions.get(direction))
@@ -63,15 +63,25 @@ export class DungeonMap extends IdbBacked {
       (direction) => direction !== entranceDirection
     );
     // 2: check for surrounding rooms and remove any there as possible exits
-    const wallTiles = possibleExitDirections.map((direction) => ({
+    const walls = possibleExitDirections.map((direction) => ({
       direction,
       wallTiles: room.wallTiles(direction),
     }));
     // 3: choose up to `count` from the remaining exits possibilities
-    while (count > 0) {
-      oneOf(walls);
+    let iterations = 10;
+    const exits = [];
+    while (count > 0 && iterations > 0) {
+      iterations--;
+      const wall = oneOf(walls);
+      const exitTile = this.#move(oneOf(wall.wallTiles), wall.direction);
+      if(this.#checkForNearbyRoom(this.exitTile)) continue;
+      exits.push({...exitTile, northSouth: [DIRECTION.NORTH, DIRECTION.SOUTH].includes(wall.direction)});
+      count--;
     }
     // 4: create the exits
+    exits.forEach(exit => {
+      room.addExit(exit);
+    })
   }
 
   #roomOverlaps(room) {
@@ -90,26 +100,29 @@ export class DungeonMap extends IdbBacked {
     exits = rollDice(5) - 1,
     entrance = {
       fromDirection: DIRECTION.NORTH,
-      coordinates: [{ x: 0, y: 0, z: 0 }],
+      coordinates: { x: 0, z: 0 },
     }
   ) {
-    if (this.#check(entrance.position, OPPOSITE_DIRECTION[fromDirection]))
+    if (this.#check(entrance.position, OPPOSITE_DIRECTION[entrance.fromDirection]))
       return null;
     const roomDetails = {
       x:
-        entrance.position.x + directionModifier(entrance.fromDirection) * width,
+        entrance.coordinates.x + directionModifier(entrance.fromDirection) * width,
       z:
-        entrance.position.z +
+        entrance.coordinates.z +
         directionModifier(entrance.fromDirection) * length,
       entrance,
       width,
       length,
     };
-    let room = new Room(null, this.id, roomDetails);
+    let room = new Room(undefined, this.id, roomDetails);
+    await room.initialized;
+    
 
     if (this.#roomOverlaps(room)) {
       room.dispatchEvent(new Event("destroy"));
-      room = new Room(null, this.id, { ...roomDetails, width: 0, length: 0 });
+      room = new Room(undefined, this.id, { ...roomDetails, width: 0, length: 0 });
+      await room.initialized;
       return room;
     }
 

@@ -1,0 +1,20 @@
+{
+  "name": "dungo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dungo.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "parcel build ./dungo.html",
+    "start": "parcel ./dungo.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "comlink": "^4.3.1",
+    "idb-keyval": "^6.0.3",
+    "lit": "^2.6.1",
+    "three": "^0.140.2"
+  }
+}

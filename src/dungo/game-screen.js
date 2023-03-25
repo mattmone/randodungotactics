@@ -92,10 +92,10 @@ class GameScreen extends LitElement {
       directionalLight: this.#directionalLight,
       ambientLight: this.#ambientLight,
     } = initScene(this.#canvas));
-
-    this.renderRoom(await this.#map.generateRoom(rollDice(3, 2), rollDice(3, 2), {
-      exits: { count: 1 },
-    }));
+    const firstRoom = await this.#map.generateRoom(rollDice(3, 2), rollDice(3, 2), 1);
+    await firstRoom.initialized;
+    const renderedRoom = await this.renderRoom(firstRoom);
+    this.#scene.add(renderedRoom);
 
     this.playerCrew.leader.avatar.mesh.position.set(0, 0, 0);
     this.playerCrew.leader.avatar.mesh.scale.set(0.05, 0.05, 0.05);
@@ -140,7 +140,7 @@ class GameScreen extends LitElement {
     return box;
   }
 
-  #generateExit(position, terrainType, northSouth, options = {}) {
+  #generateExit(position, terrainType = "rock", northSouth, options = {}) {
     const floorBox = this.#generateFloorBox(position, terrainType, {
       type: false,
       action: ACTION.MOVE,
@@ -171,23 +171,13 @@ class GameScreen extends LitElement {
    */
   async renderRoom(room) {
     const group = new Group();
-    if (options.entrance) {
-      const startingPosition = copyVector(options.entrance.position).add(
-        options.entrance.parent.position
-      );
-      group.position.set(
-        options.entrance.userData.northSouth
-          ? startingPosition.x
-          : startingPosition.x +
-              (options.entrance.userData.northEast ? -1 : 1) * (width + 1)
-        ,0,
-        options.entrance.userData.northSouth
-          ? startingPosition.z +
-              (options.entrance.userData.northEast ? -1 : 1) * (length + 1)
-          : startingPosition.z
-      );
-    }
-    if (options.exits) group.add(...this.#determineRoomExits(options.exits, width, length, group));
+    room.floorTiles.forEach(({x, z}) => {
+      group.add(this.#generateFloorBox({ x, z }));
+    });
+    room.exitTiles.forEach(({x, y}) => {
+      group.add(this.#generateExit({x, y}))
+    })
+    
     return group;
   }
 

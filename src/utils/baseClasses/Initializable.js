@@ -12,7 +12,9 @@ export class Initializable extends EventTarget {
   get initialized() {
     if(this.#initialized) return Promise.resolve(this);
     return new Promise(resolve => {
-      this.addEventListener('initialized', () => resolve(this), {once: true});
+      this.addEventListener('initialized', () => {
+        resolve(this)
+      }, {once: true});
     });
   }
 

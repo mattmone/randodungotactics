@@ -1,19 +1,13 @@
 import { DIRECTION } from "../constants/directions.js";
 import { IdbBacked } from "../utils/baseClasses/IdbBacked.js";
 import { FloorTile } from "./FloorTile.js";
-
-class generateFloorTileEvent extends Event {
-  constructor(floorTile) {
-    super("generateFloorTile");
-    this.floorTile = floorTile;
-  }
-}
+import { ExitTile } from "./ExitTile.js";
 
 export class Room extends IdbBacked {
   constructor(
     id = crypto.randomUUID(),
     mapid,
-    { x, y, width, length, entrance }
+    { x = 0, z = 0, width, length, entrance }
   ) {
     super(id);
     this.mapid = mapid;
@@ -22,16 +16,16 @@ export class Room extends IdbBacked {
     for (let w = -width; w <= width; w++) {
       for (let l = -length; l <= length; l++) {
         floorTileCoordinates.push(
-          this.#generateFloorBox({ x: w + x, z: l + z })
+          { x: w + x, z: l + z }
         );
       }
     }
-    floorTileCoordinates.push(...entrance.coordinates);
-    this.floorTiles = Promise.all(
+    floorTileCoordinates.push(entrance.coordinates);
+    Promise.all(
       floorTileCoordinates.map(this.generateFloorTile)
     ).then((floorTiles) => {
-      this.dispatchEvent(new Event("room-generated"));
-      return floorTiles;
+      this.floorTiles = floorTiles;
+      this.dispatchEvent(new Event('initialize'));
     });
   }
 
@@ -40,6 +34,7 @@ export class Room extends IdbBacked {
       mapid: true,
       walls: true,
       floorTiles: IdbBacked.Array(FloorTile),
+      exitTiles: IdbBacked.Array(ExitTile)
     };
   }
 
@@ -77,8 +72,12 @@ export class Room extends IdbBacked {
   }
 
   async generateFloorTile(position) {
-    const floorTile = new FloorTile(null, position.x, position.z);
-    this.dispatchEvent(new generateFloorTileEvent(floorTile));
+    const floorTile = new FloorTile(undefined, {x: position.x, z: position.z});
     return floorTile;
+  }
+
+  async addExit({x, y, northSouth}) {
+    const exitTile = new ExitTile(undefined, {x, z, northSouth});
+    this.exitTiles.push(exitTile);
   }
 }

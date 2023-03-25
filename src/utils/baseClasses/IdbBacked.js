@@ -37,8 +37,13 @@ export class IdbBacked extends Initializable {
   constructor(id = crypto.randomUUID()) {
     super();
     this.id = id;
-    get(id, this.#idbStore).then(details => this.deserialize(details)).then(() => {
+    get(id, this.#idbStore).then(details => {
+      if(!details) throw new Error('no Room')
+      return this.deserialize(details)
+    }).then(() => {
       this.dispatchEvent(new Event('initialize'));
+    }).catch(() => {
+      return {};
     });
     this.#setupSerializedProperties();
     this.addEventListener('save', () => this.#save());
