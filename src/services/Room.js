@@ -4,23 +4,46 @@ import { FloorTile } from "./FloorTile.js";
 import { ExitTile } from "./ExitTile.js";
 
 export class Room extends IdbBacked {
+  #wall = new Map();
+  #wallTiles = new Map();
+
+  /**
+   * 
+   * @param {string} id the id of the room
+   * @param {string} mapid the id of the map the room is on
+   * @param {RoomDetails} roomDetails the details of the room
+   */
   constructor(
     id = crypto.randomUUID(),
     mapid,
-    { x = 0, z = 0, width, length, entrance }
+    roomDetails
   ) {
     super(id);
+    const { x, z, width, length, entrance } = roomDetails;
     this.mapid = mapid;
     const floorTileCoordinates = [];
+    /** @type {ExitTile[]} */
+    this.exitTiles = [];
+
+    this.wall = {
+      north: z - length,
+      south: z + length,
+      east: x + width,
+      west: x - width,
+    }
 
     for (let w = -width; w <= width; w++) {
+      let northWall = w === -width;
+      let southWall = w === width;
       for (let l = -length; l <= length; l++) {
+        const westWall = l === -length;
+        const eastWall = l === length;
         floorTileCoordinates.push(
-          { x: w + x, z: l + z }
+          { x: w + x, z: l + z, northWall, southWall, westWall, eastWall }
         );
       }
     }
-    floorTileCoordinates.push(entrance.coordinates);
+    floorTileCoordinates.push(entrance.position);
     Promise.all(
       floorTileCoordinates.map(this.generateFloorTile)
     ).then((floorTiles) => {
@@ -39,27 +62,44 @@ export class Room extends IdbBacked {
   }
 
   wall(direction) {
+    if(this.#wall.has(direction)) return this.#wall.get(direction)
+    let wall;
     if ([DIRECTION.SOUTH, DIRECTION.WEST].includes(direction))
-      return Math.max(
+      wall = Math.max(
         ...this.floorTiles.map((floorTile) =>
           direction === DIRECTION.SOUTH ? floorTile.z : floorTile.x
         )
       );
     else
-      return Math.min(
+      wall = Math.min(
         ...this.floorTiles.map((floorTile) =>
           direction === DIRECTION.NORTH ? floorTile.z : floorTile.x
         )
       );
+    this.#wall.set(direction, wall);
+    return wall
   }
 
+  /**
+   * get the wall tiles for the given direction
+   * @param {number} direction the direction to get the wall tiles for
+   * @returns the wall tiles for the given direction
+   */
   wallTiles(direction) {
-    return this.floorTiles.filter(
+    // Return the cached wall tiles for the given direction, if they exist
+    if (this.#wallTiles.has(direction)) {
+      return this.#wallTiles.get(direction);
+    }
+    // Otherwise, compute the wall tiles for the given direction
+    const wallTiles = this.floorTiles.filter(
       (tile) =>
         tile[
           [DIRECTION.NORTH, DIRECTION.SOUTH].includes(direction) ? "z" : "x"
-        ] === walls(direction)
+        ] === this.wall(direction)
     );
+    // Cache the computed wall tiles for the given direction
+    this.#wallTiles.set(direction, wallTiles);
+    return wallTiles;
   }
 
   get allWalls() {
@@ -71,13 +111,26 @@ export class Room extends IdbBacked {
     };
   }
 
-  async generateFloorTile(position) {
-    const floorTile = new FloorTile(undefined, {x: position.x, z: position.z});
+  /**
+   * 
+   * @param {import("../../types").TileDetails} tileDetails 
+   * @returns 
+   */
+  async generateFloorTile(tileDetails) {
+    const floorTile = new FloorTile(undefined, tileDetails);
     return floorTile;
   }
 
-  async addExit({x, y, northSouth}) {
-    const exitTile = new ExitTile(undefined, {x, z, northSouth});
+  /**
+   * 
+   * @param {import("../../types").ExitTileDetails} exitTileDetails 
+   */
+  async addExit(exitTileDetails) {
+    const exitTile = new ExitTile(undefined, exitTileDetails);
     this.exitTiles.push(exitTile);
   }
 }
+
+/**
+ * @typedef {import('../../types').RoomDetails} RoomDetails
+ */
