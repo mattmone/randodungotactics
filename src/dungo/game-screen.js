@@ -30,6 +30,7 @@ import { copyVector } from "../utils/copyVector.js";
 import { rollDice } from "../utils/rollDice.js";
 import { DIRECTION, OPPOSITE_DIRECTION } from '../constants/directions.js';
 import { DungeonMap } from "../services/DungeonMap.js";
+import { directionModifier } from "../utils/directionModifier.js";
 const ACTION = {
   MOVE: "move",
   OPEN: "open",
@@ -104,7 +105,7 @@ class GameScreen extends LitElement {
     this.#scene.add(this.#focalPoint);
 
     this.#camera.position.set(10, 10, 10);
-    this.#camera.zoom = 12;
+    this.#camera.zoom = 8;
     this.#camera.lookAt(this.#focalPoint.position);
     this.#camera.updateProjectionMatrix();
 
@@ -119,46 +120,62 @@ class GameScreen extends LitElement {
 
   /**
    * create a floor box
-   * @param {Vector3} position the position of the floor box
-   * @param {string} terrainType the terrain of the floor box
-   * @param {FloorBoxOptions} [options] optional options to add to a floor box creation
-   * @returns {Mesh} the box for the floor piece
+   * @param {import('../services/FloorTile.js').FloorTile} floorTile
+   * @param {import('../../types').FloorTileOptions} options
+   * @returns {Group} the box for the floor piece and associtated content
    */
-  #generateFloorBox(position, terrainType = "rock", options = {}) {
-    const textureCanvas = createTerrainSide(terrainType);
+  #generateFloorBox(floorTile, options = {}) {
+    const textureCanvas = createTerrainSide(floorTile.terrain);
     const texture = new CanvasTexture(textureCanvas);
 
     const boxMaterial = new MeshBasicMaterial({
       map: texture,
     });
     const box = new Mesh(new BoxGeometry(1, 1, 1), boxMaterial);
-    box.position.set(position.x, -0.5, position.z);
+    box.position.set(floorTile.x, -0.5, floorTile.z);
     box.userData = {
       type: options.type ?? TYPE.INTERACTABLE,
       action: options.action ?? ACTION.MOVE,
     };
+    if(floorTile.hasWall) {
+      const textureCanvas = createTerrainSide("rock");
+    const texture = new CanvasTexture(textureCanvas);
+      const wallMaterial = new MeshBasicMaterial({
+        map: texture,
+      });
+      const wall = new Mesh(new BoxGeometry(floorTile.northSouthWall ? 0.1 : 1, 1, floorTile.eastWestWall ? 0.1 : 1), wallMaterial);
+      wall.position.set(directionModifier( ) 0, 0.5, -0.5);
+      box.add(wall);
+    }
     return box;
   }
 
-  #generateExit(position, terrainType = "rock", northSouth, options = {}) {
-    const floorBox = this.#generateFloorBox(position, terrainType, {
+  /**
+   * 
+   * @param {import('../services/ExitTile.js').ExitTile} exitTile 
+   * @param {FloorTileOptions} options 
+   * @returns 
+   */
+  #generateExit(exitTile, options = {}) {
+    const floorBox = this.#generateFloorBox(exitTile, {
       type: false,
       action: ACTION.MOVE,
     });
-    const textureCanvas = createTerrainSide("stump");
+    const textureCanvas = createTerrainSide("rock");
     const texture = new CanvasTexture(textureCanvas);
 
     const doorMaterial = new MeshBasicMaterial({
       map: texture,
     });
     const door = new Mesh(
-      new BoxGeometry(northSouth ? 0.99 : 0.25, 1, northSouth ? 0.25 : 0.99),
+      new BoxGeometry(exitTile.northSouth ? 0.99 : 0.25, 1, exitTile.northSouth ? 0.25 : 0.99),
       doorMaterial
     );
     door.position.set(0, 1, 0);
     door.userData = {
       type: TYPE.INTERACTABLE,
       action: ACTION.OPEN,
+      tile: exitTile
     };
     floorBox.add(door);
     return floorBox;
@@ -171,13 +188,13 @@ class GameScreen extends LitElement {
    */
   async renderRoom(room) {
     const group = new Group();
-    room.floorTiles.forEach(({x, z}) => {
-      group.add(this.#generateFloorBox({ x, z }));
+    room.floorTiles.forEach((floorTile) => {
+      group.add(this.#generateFloorBox(floorTile));
     });
-    room.exitTiles.forEach(({x, y}) => {
-      group.add(this.#generateExit({x, y}))
+    room.exitTiles.forEach((exitTile) => {
+      group.add(this.#generateExit(exitTile))
     })
-    
+    group.userData.room = room;
     return group;
   }
 
@@ -256,30 +273,22 @@ class GameScreen extends LitElement {
           this.#scene.children.forEach((mesh) => mesh.updateMatrixWorld())
         );
     } else if (this.intersectedObject.userData.action === ACTION.OPEN) {
-      this.intersectedObject.parent.userData.type = TYPE.INTERACTABLE;
+      
       const { mesh } = await this.#animationCollection.createMoveAnimation({
         mesh: this.intersectedObject,
         endPointVector: new Vector3(0, 0, 0),
         faceEndPoint: false,
       });
-      const entrance = mesh.parent;
+      mesh.parent.userData.type = TYPE.INTERACTABLE;
+      console.log(mesh.parent.userData);
       mesh.removeFromParent();
       const roomWidth = rollDice(3, 2);
       const roomLength = rollDice(3, 2);
       
-      const room = await this.generateRoom(roomWidth, roomLength, {
-        entrance,
-        exits: {
-          count: rollDice(3),
-          entranceDirection: mesh.userData.direction,
-        },
-      });
-      console.log('entrance position');
-      console.table(copyVector(entrance.position).add(entrance.parent.position));
-      console.table({roomWidth, roomLength})
-      console.log('room position', room.position)
+      const room = await this.#map.generateRoom(roomWidth, roomLength, rollDice(3), mesh.userData.tile);
+      const renderedRoom = await this.renderRoom(room);
 
-      this.#scene.add(room);
+      this.#scene.add(renderedRoom);
     }
   }
 
