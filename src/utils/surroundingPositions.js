@@ -2,6 +2,7 @@ import { DIRECTION } from "../constants/directions.js";
 
 export function surroundingPositions(position) {
   const directionKeys = new Map();
+  console.log(position);
   directionKeys.set(
     DIRECTION.NORTH,
     { x: position.x, z: position.z - 1 }

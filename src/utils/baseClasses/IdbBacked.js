@@ -20,8 +20,27 @@ export class IdbBacked extends Initializable {
    */
   static Array(ExtendedIdbBackedClass) {
     return {
+      /**
+       * serialize the property
+       * @param {IdbBacked} instance the instance of an IdbBacked class
+       * @param {string} property the name of the property to be backed by idb
+       * @returns {void}
+       */
       serialize: (instance, property) => instance[property].map(prop => prop.id),
-      deserialize: async (instance, property, propDetails) => await Promise.all(propDetails.map(propid => new ExtendedIdbBackedClass(propid)).map(item => item.initialized)),
+      /**
+       * 
+       * @param {IdbBacked} instance the instance of an IdbBacked class
+       * @param {string} property the name of the property to be backed by idb
+       * @param {any} propDetails the details of the property to be backed by idb
+       * @returns 
+       */
+      deserialize: async (instance, property, propDetails) => await Promise.all(propDetails.map(
+        /**
+         * 
+         * @param {string} propid the id of the property backed by idb
+         * @returns {IdbBacked} an instance of an IdbBacked class
+         */
+        propid => new ExtendedIdbBackedClass(propid)).map(item => item.initialized)),
       destroy: (instance, property) => instance[property].forEach(prop => prop.dispatchEvent(new Event('destroy')))
     }
   }
