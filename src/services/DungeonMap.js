@@ -57,7 +57,7 @@ export class DungeonMap extends IdbBacked {
    * @param {Direction} entranceDirection the direction the entrance comes from for the room
    * @param {number} count the total possible exits
    */
-  #determineRoomExits(room, entranceDirection, count) {
+  async #determineRoomExits(room, entranceDirection, count) {
     // 1: remove entranceDirection
     const possibleExitDirections = Object.values(DIRECTION).filter(
       (direction) => direction !== entranceDirection
@@ -74,20 +74,21 @@ export class DungeonMap extends IdbBacked {
       iterations--;
       const wall = oneOf(walls);
       const exitTile = this.#move(oneOf(wall.wallTiles), wall.direction);
-      if(this.#checkForNearbyRoom(this.exitTile)) continue;
-      exits.push({...exitTile, northSouth: [DIRECTION.NORTH, DIRECTION.SOUTH].includes(wall.direction)});
+      if(this.#checkForNearbyRoom(exitTile)) continue;
+      exits.push({...exitTile, direction: wall.direction});
       count--;
     }
     // 4: create the exits
     exits.forEach(exit => {
       room.addExit(exit);
     })
+    return Promise.all(exits.map(exit => exit.initialized))
   }
 
   #roomOverlaps(room) {
     return this.#rooms.some((exisitingRoom) =>
-      exisitingRoom.floorTile.some((exisitingFloorTile) =>
-        room.floorTile.some((floorTile) =>
+      exisitingRoom.floorTiles.some((exisitingFloorTile) =>
+        room.floorTiles.some((floorTile) =>
           floorTile.at(exisitingFloorTile.x, exisitingFloorTile.z)
         )
       )
@@ -99,18 +100,19 @@ export class DungeonMap extends IdbBacked {
     length = rollDice(3, 2),
     exits = rollDice(5) - 1,
     entrance = {
+      northSouth: true,
       fromDirection: DIRECTION.NORTH,
-      coordinates: { x: 0, z: 0 },
+      position: { x: 0, z: 0 },
     }
   ) {
     if (this.#check(entrance.position, OPPOSITE_DIRECTION[entrance.fromDirection]))
       return null;
     const roomDetails = {
       x:
-        entrance.coordinates.x + directionModifier(entrance.fromDirection) * width,
+        entrance.position.x + (entrance.northSouth ? 0 : directionModifier(entrance.direction) * (width +1)),
       z:
-        entrance.coordinates.z +
-        directionModifier(entrance.fromDirection) * length,
+        entrance.position.z +
+        (entrance.northSouth ? directionModifier(entrance.direction) * (length +1) : 0),
       entrance,
       width,
       length,
@@ -118,15 +120,14 @@ export class DungeonMap extends IdbBacked {
     let room = new Room(undefined, this.id, roomDetails);
     await room.initialized;
     
-
-    if (this.#roomOverlaps(room)) {
+     if (this.#roomOverlaps(room)) {
       room.dispatchEvent(new Event("destroy"));
-      room = new Room(undefined, this.id, { ...roomDetails, width: 0, length: 0 });
+      room = new Room(undefined, this.id, { ...roomDetails, x: entrance.position.x, z: entrance.position.z, width: 0, length: 0 });
       await room.initialized;
       return room;
     }
 
-    const possibleExits = this.#determineRoomExits(
+    await this.#determineRoomExits(
       room,
       entrance.fromDirection,
       exits
