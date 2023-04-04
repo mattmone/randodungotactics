@@ -1,3 +1,4 @@
+import { DIRECTIONS } from './constants';
 export type TileDetails = {
   x: number;
   z: number;
@@ -32,20 +33,4 @@ export type Position = {
   z: number;
 }
 
-export enum Direction {
-  North = 0,
-  East = 1,
-  South = 2,
-  West = 3,
-}
-
-export enum OppositeDirection {
-  North = 2,
-  East = 3,
-  South = 0,
-  West = 1,
-  2 =  0,
-  3 =  1,
-  0 =  2,
-  1 =  3,
-}
+export type DIRECTION = typeof DIRECTIONS[keyof typeof DIRECTIONS];

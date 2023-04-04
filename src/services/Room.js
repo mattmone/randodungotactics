@@ -82,8 +82,8 @@ export class Room extends IdbBacked {
 
   /**
    * get the wall tiles for the given direction
-   * @param {number} direction the direction to get the wall tiles for
-   * @returns the wall tiles for the given direction
+   * @param {import('../../types.js').DIRECTION} direction the direction to get the wall tiles for
+   * @returns {FloorTile[]} the wall tiles for the given direction
    */
   wallTiles(direction) {
     // Return the cached wall tiles for the given direction, if they exist

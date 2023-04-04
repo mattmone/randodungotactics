@@ -54,7 +54,7 @@ export class DungeonMap extends IdbBacked {
   /**
    * determine the room exits
    * @param {Room} room the room to determine possible exits fore
-   * @param {Direction} entranceDirection the direction the entrance comes from for the room
+   * @param {import('../../types.js').DIRECTION} entranceDirection the direction the room is entered from
    * @param {number} count the total possible exits
    */
   async #determineRoomExits(room, entranceDirection, count) {
@@ -85,6 +85,11 @@ export class DungeonMap extends IdbBacked {
     return Promise.all(exits.map(exit => exit.initialized))
   }
 
+  /**
+   * check if a room overlaps with any other room
+   * @param {Room} room the room to check for overlap
+   * @returns {boolean} true if the room overlaps with any other room
+   */
   #roomOverlaps(room) {
     return this.#rooms.some((exisitingRoom) =>
       exisitingRoom.floorTiles.some((exisitingFloorTile) =>
@@ -95,7 +100,16 @@ export class DungeonMap extends IdbBacked {
     );
   }
 
-  async generateRoom(
+  /**
+   * Generate room based on given parameters
+   * @param {number} width - number of tiles in the room, in the x direction
+   * @param length - number of tiles in the room, in the z direction
+   * @param exits - number of exits from the room
+   * @param entrance - entrance point to the room
+   * @return {Promise<Room|null>} - the room that was generated
+   */
+
+async generateRoom(
     width = rollDice(3, 2),
     length = rollDice(3, 2),
     exits = rollDice(5) - 1,

@@ -6,10 +6,10 @@ export const DIRECTION = {
 };
 
 export const OPPOSITE_DIRECTION = {
-  NORTH: 2,
-  EAST: 3,
-  SOUTH: 0,
-  WEST: 1,
+  NORTH: DIRECTION.SOUTH,
+  EAST: DIRECTION.WEST,
+  SOUTH: DIRECTION.NORTH,
+  WEST: DIRECTION.EAST,
   2:  0,
   3:  1,
   0:  2,
