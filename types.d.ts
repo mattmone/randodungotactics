@@ -1,4 +1,7 @@
 import { DIRECTIONS } from './constants';
+
+export type UUID = `${string}-${string}-${string}-${string}-${string}`;
+
 export type TileDetails = {
   x: number;
   z: number;
@@ -7,10 +10,8 @@ export type TileDetails = {
   southWall: boolean;
   westWall: boolean;
   terrain: string;
-}
-
-export type ExitTileDetails = TileDetails & {
-  direction: Direction;
+  type?: string;
+  exitDirection?: Direction|null;
 }
 
 export type RoomDetails = {

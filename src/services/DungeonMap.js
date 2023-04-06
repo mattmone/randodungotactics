@@ -30,15 +30,17 @@ export class DungeonMap extends IdbBacked {
     return this.#rooms;
   }
 
-  #checkForNearbyRoom(position) {
-    return Array.from(surroundingPositions(position).values()).some(
-      (position) => this.floorTiles.some((floorTile) => floorTile.at(position))
+  #checkForNearbyRoom(position, direction) {
+    const checkPosition = this.#move(position, direction);
+    return Array.from(surroundingPositions(checkPosition).values()).some(
+      (position) =>
+        this.floorTiles.some((floorTile) => floorTile.at(checkPosition))
     );
   }
 
   #verifyExitPossibility(direction, room) {}
 
-  #check(position = {x: 0, z: 0}, direction) {
+  #check(position = { x: 0, z: 0 }, direction) {
     const adjacentPositions = surroundingPositions(position);
     return this.floorTiles.find((floorTile) =>
       floorTile.at(adjacentPositions.get(direction))
@@ -67,22 +69,20 @@ export class DungeonMap extends IdbBacked {
       direction,
       wallTiles: room.wallTiles(direction),
     }));
+    console.log(walls);
     // 3: choose up to `count` from the remaining exits possibilities
     let iterations = 10;
-    const exits = [];
+
     while (count > 0 && iterations > 0) {
       iterations--;
       const wall = oneOf(walls);
-      const exitTile = this.#move(oneOf(wall.wallTiles), wall.direction);
-      if(this.#checkForNearbyRoom(exitTile)) continue;
-      exits.push({...exitTile, direction: wall.direction});
+      const exitTile = oneOf(wall.wallTiles);
+      if (exitTile.isExit || this.#checkForNearbyRoom(exitTile, wall.direction))
+        continue;
+      exitTile.makeExit(wall.direction);
+      console.log(exitTile, "exit");
       count--;
     }
-    // 4: create the exits
-    exits.forEach(exit => {
-      room.addExit(exit);
-    })
-    return Promise.all(exits.map(exit => exit.initialized))
   }
 
   /**
@@ -109,7 +109,7 @@ export class DungeonMap extends IdbBacked {
    * @return {Promise<Room|null>} - the room that was generated
    */
 
-async generateRoom(
+  async generateRoom(
     width = rollDice(3, 2),
     length = rollDice(3, 2),
     exits = rollDice(5) - 1,
@@ -119,33 +119,42 @@ async generateRoom(
       position: { x: 0, z: 0 },
     }
   ) {
-    if (this.#check(entrance.position, OPPOSITE_DIRECTION[entrance.fromDirection]))
+    if (
+      this.#check(entrance.position, OPPOSITE_DIRECTION[entrance.fromDirection])
+    )
       return null;
     const roomDetails = {
       x:
-        entrance.position.x + (entrance.northSouth ? 0 : directionModifier(entrance.direction) * (width +1)),
+        entrance.position.x +
+        (entrance.northSouth
+          ? 0
+          : directionModifier(entrance.direction) * (width + 1)),
       z:
         entrance.position.z +
-        (entrance.northSouth ? directionModifier(entrance.direction) * (length +1) : 0),
+        (entrance.northSouth
+          ? directionModifier(entrance.direction) * (length + 1)
+          : 0),
       entrance,
       width,
       length,
     };
     let room = new Room(undefined, this.id, roomDetails);
     await room.initialized;
-    
-     if (this.#roomOverlaps(room)) {
+
+    if (this.#roomOverlaps(room)) {
       room.dispatchEvent(new Event("destroy"));
-      room = new Room(undefined, this.id, { ...roomDetails, x: entrance.position.x, z: entrance.position.z, width: 0, length: 0 });
+      room = new Room(undefined, this.id, {
+        ...roomDetails,
+        x: entrance.position.x,
+        z: entrance.position.z,
+        width: 0,
+        length: 0,
+      });
       await room.initialized;
       return room;
     }
 
-    await this.#determineRoomExits(
-      room,
-      entrance.fromDirection,
-      exits
-    );
+    await this.#determineRoomExits(room, entrance.fromDirection, exits);
     this.#rooms.push(room);
     return room;
   }

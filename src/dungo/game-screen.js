@@ -28,7 +28,12 @@ import { AnimationCollection } from "../services/AnimationCollection.js";
 import { oneOf } from "../utils/oneOf.js";
 import { copyVector } from "../utils/copyVector.js";
 import { rollDice } from "../utils/rollDice.js";
-import { DIRECTION, OPPOSITE_DIRECTION } from '../constants/directions.js';
+import {
+  DIRECTION,
+  OPPOSITE_DIRECTION,
+  isNorthSouth,
+  isEastWest,
+} from "../constants/directions.js";
 import { DungeonMap } from "../services/DungeonMap.js";
 import { directionModifier } from "../utils/directionModifier.js";
 const ACTION = {
@@ -93,7 +98,11 @@ class GameScreen extends LitElement {
       directionalLight: this.#directionalLight,
       ambientLight: this.#ambientLight,
     } = initScene(this.#canvas));
-    const firstRoom = await this.#map.generateRoom(rollDice(3, 2), rollDice(3, 2), 1);
+    const firstRoom = await this.#map.generateRoom(
+      rollDice(3, 2),
+      rollDice(3, 2),
+      1
+    );
     await firstRoom.initialized;
     const renderedRoom = await this.renderRoom(firstRoom);
     this.#scene.add(renderedRoom);
@@ -122,7 +131,7 @@ class GameScreen extends LitElement {
    * create a floor box
    * @param {import('../services/FloorTile.js').FloorTile} floorTile
    * @param {import('../../types').FloorTileOptions} options
-   * @returns {Group} the box for the floor piece and associtated content
+   * @returns {Mesh} the box for the floor piece and associtated content
    */
   #generateFloorBox(floorTile, options = {}) {
     const textureCanvas = createTerrainSide(floorTile.terrain);
@@ -137,48 +146,80 @@ class GameScreen extends LitElement {
       type: options.type ?? TYPE.INTERACTABLE,
       action: options.action ?? ACTION.MOVE,
     };
-    if(floorTile.hasWall) {
-      const textureCanvas = createTerrainSide("rock");
-    const texture = new CanvasTexture(textureCanvas);
-      const wallMaterial = new MeshBasicMaterial({
-        map: texture,
-      });
-      const wall = new Mesh(new BoxGeometry(floorTile.northSouthWall ? 0.1 : 1, 1, floorTile.eastWestWall ? 0.1 : 1), wallMaterial);
-      wall.position.set(directionModifier( ) 0, 0.5, -0.5);
-      box.add(wall);
+    if (floorTile.hasWall) {
+      const walls = this.#generateWalls(floorTile);
+      box.add(...Object.values(walls));
+    }
+    if (floorTile.isExit) {
+      const exit = this.#generateExit(floorTile, options);
+      box.add(exit);
     }
     return box;
   }
 
   /**
-   * 
-   * @param {import('../services/ExitTile.js').ExitTile} exitTile 
-   * @param {FloorTileOptions} options 
-   * @returns 
+   *
+   * @param {import('../services/FloorTile.js').FloorTile} exitTile
+   * @param {import('../../types.js').TileDetails|Object} options
+   * @returns
    */
   #generateExit(exitTile, options = {}) {
-    const floorBox = this.#generateFloorBox(exitTile, {
-      type: false,
-      action: ACTION.MOVE,
-    });
-    const textureCanvas = createTerrainSide("rock");
+    const textureCanvas = createTerrainSide("stump");
     const texture = new CanvasTexture(textureCanvas);
-
     const doorMaterial = new MeshBasicMaterial({
       map: texture,
     });
     const door = new Mesh(
-      new BoxGeometry(exitTile.northSouth ? 0.99 : 0.25, 1, exitTile.northSouth ? 0.25 : 0.99),
+      new BoxGeometry(
+        exitTile.northSouthExit ? 0.99 : 0.1,
+        1,
+        exitTile.northSouthExit ? 0.1 : 0.99
+      ),
       doorMaterial
     );
-    door.position.set(0, 1, 0);
+    door.position.set(
+      exitTile.northSouthExit ? 0 : directionModifier(exitTile.exitDirection) * -0.5,
+      1,
+      exitTile.northSouthExit ? directionModifier(exitTile.exitDirection) * 0.5 : 0,
+    );
     door.userData = {
       type: TYPE.INTERACTABLE,
       action: ACTION.OPEN,
-      tile: exitTile
+      tile: exitTile,
     };
-    floorBox.add(door);
-    return floorBox;
+    return door;
+  }
+
+  #generateWalls(wallTile) {
+    const textureCanvas = createTerrainSide("water");
+    const texture = new CanvasTexture(textureCanvas);
+    const wallMaterial = new MeshBasicMaterial({
+      map: texture,
+    });
+    const walls = wallTile.wallDirections.map((direction) => [
+      direction,
+      this.#generateWall(direction, wallMaterial),
+    ]);
+    return Object.fromEntries(walls);
+  }
+
+  #generateWall(direction, material) {
+    let wallHeight = 1.2;
+    const wall = new Mesh(
+      new BoxGeometry(
+        isEastWest(direction) ? 0.1 : 1,
+        wallHeight,
+        isNorthSouth(direction) ? 0.1 : 1
+      ),
+      material
+    );
+    wall.position.set(
+      isEastWest(direction) ? directionModifier(direction) * -0.5 : 0,
+      ([DIRECTION.NORTH, DIRECTION.WEST].includes(direction) ? 0.5 : -0.5) +
+        wallHeight / 2,
+      isNorthSouth(direction) ? directionModifier(direction) * 0.5 : 0
+    );
+    return wall;
   }
 
   /**
@@ -191,9 +232,6 @@ class GameScreen extends LitElement {
     room.floorTiles.forEach((floorTile) => {
       group.add(this.#generateFloorBox(floorTile));
     });
-    room.exitTiles.forEach((exitTile) => {
-      group.add(this.#generateExit(exitTile))
-    })
     group.userData.room = room;
     return group;
   }
@@ -273,10 +311,9 @@ class GameScreen extends LitElement {
           this.#scene.children.forEach((mesh) => mesh.updateMatrixWorld())
         );
     } else if (this.intersectedObject.userData.action === ACTION.OPEN) {
-      
       const { mesh } = await this.#animationCollection.createMoveAnimation({
         mesh: this.intersectedObject,
-        endPointVector: new Vector3(0, 0, 0),
+        endPointVector: this.intersectedObject.position.clone().setY(0),
         faceEndPoint: false,
       });
       mesh.parent.userData.type = TYPE.INTERACTABLE;
@@ -284,8 +321,13 @@ class GameScreen extends LitElement {
       mesh.removeFromParent();
       const roomWidth = rollDice(3, 2);
       const roomLength = rollDice(3, 2);
-      
-      const room = await this.#map.generateRoom(roomWidth, roomLength, rollDice(3), mesh.userData.tile);
+
+      const room = await this.#map.generateRoom(
+        roomWidth,
+        roomLength,
+        rollDice(3),
+        mesh.userData.tile
+      );
       const renderedRoom = await this.renderRoom(room);
 
       this.#scene.add(renderedRoom);

@@ -20,12 +20,11 @@ export class AnimationCollection {
 
   /**
    * turn the target in the direction
-   * @param {Object3D} mesh the mesh to be rotated
+   * @param {import('../libs/three.module.js').Object3D} mesh the mesh to be rotated
    * @param {Vector3} startRef the starting Vector3
    * @param {Vector3} endRef the ending Vector3
    */
   createRotationAnimation(mesh, startRef, endRef) {
-    console.log('rotating mesh')
     const end = copyVector(endRef);
     const lookTo = end.sub(copyVector(startRef));
     lookTo.y = 0;
