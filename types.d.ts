@@ -1,15 +1,16 @@
 import { DIRECTIONS } from './constants';
+import { FloorTile } from './dist/services/FloorTile';
 
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
 export type TileDetails = {
   x: number;
   z: number;
-  northWall: boolean;
-  eastWall: boolean;
-  southWall: boolean;
-  westWall: boolean;
-  terrain: string;
+  northWall?: boolean;
+  eastWall?: boolean;
+  southWall?: boolean;
+  westWall?: boolean;
+  terrain?: string;
   type?: string;
   exitDirection?: Direction|null;
 }
@@ -19,14 +20,8 @@ export type RoomDetails = {
   z: number;
   width: number;
   length: number;
-  terrain: string;
-  entrance: EntranceDetails
-}
-
-export type EntranceDetails = {
-  position: Position;
-  direction: Direction;
-  fromDirection: Direction;
+  terrain?: string;
+  entrance?: FloorTile
 }
 
 export type Position = {

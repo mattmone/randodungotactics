@@ -159,12 +159,12 @@ class GameScreen extends LitElement {
 
   /**
    *
-   * @param {import('../services/FloorTile.js').FloorTile} exitTile
+   * @param {FloorTile} exitTile
    * @param {import('../../types.js').TileDetails|Object} options
    * @returns
    */
   #generateExit(exitTile, options = {}) {
-    const textureCanvas = createTerrainSide("stump");
+    const textureCanvas = createTerrainSide("entry");
     const texture = new CanvasTexture(textureCanvas);
     const doorMaterial = new MeshBasicMaterial({
       map: texture,
@@ -178,7 +178,7 @@ class GameScreen extends LitElement {
       doorMaterial
     );
     door.position.set(
-      exitTile.northSouthExit ? 0 : directionModifier(exitTile.exitDirection) * -0.5,
+      exitTile.northSouthExit ? 0 : directionModifier(exitTile.exitDirection) * 0.5,
       1,
       exitTile.northSouthExit ? directionModifier(exitTile.exitDirection) * 0.5 : 0,
     );
@@ -190,21 +190,30 @@ class GameScreen extends LitElement {
     return door;
   }
 
+  /**
+   * 
+   * @param {FloorTile} wallTile the floor tile of the wall
+   * @returns {Wall}
+   */
   #generateWalls(wallTile) {
-    const textureCanvas = createTerrainSide("water");
+    const textureCanvas = createTerrainSide("mountain");
     const texture = new CanvasTexture(textureCanvas);
-    const wallMaterial = new MeshBasicMaterial({
-      map: texture,
-    });
     const walls = wallTile.wallDirections.map((direction) => [
       direction,
-      this.#generateWall(direction, wallMaterial),
+      this.#generateWall(direction, new MeshBasicMaterial({
+        map: texture,
+      })),
     ]);
+    
     return Object.fromEntries(walls);
   }
 
   #generateWall(direction, material) {
-    let wallHeight = 1.2;
+    let wallHeight = 2;
+    if([DIRECTION.SOUTH, DIRECTION.EAST].includes(direction)) {
+      material.transparent = true;
+      material.opacity = 0.6;
+    }
     const wall = new Mesh(
       new BoxGeometry(
         isEastWest(direction) ? 0.1 : 1,
@@ -214,11 +223,11 @@ class GameScreen extends LitElement {
       material
     );
     wall.position.set(
-      isEastWest(direction) ? directionModifier(direction) * -0.5 : 0,
-      ([DIRECTION.NORTH, DIRECTION.WEST].includes(direction) ? 0.5 : -0.5) +
-        wallHeight / 2,
+      isEastWest(direction) ? directionModifier(direction) * 0.5 : 0,
+      -0.5 + wallHeight / 2,
       isNorthSouth(direction) ? directionModifier(direction) * 0.5 : 0
     );
+    
     return wall;
   }
 
@@ -229,6 +238,9 @@ class GameScreen extends LitElement {
    */
   async renderRoom(room) {
     const group = new Group();
+    if(room.hallway) {
+      group.add(this.#generateFloorBox(room.hallway.tile));
+    }
     room.floorTiles.forEach((floorTile) => {
       group.add(this.#generateFloorBox(floorTile));
     });
@@ -317,7 +329,6 @@ class GameScreen extends LitElement {
         faceEndPoint: false,
       });
       mesh.parent.userData.type = TYPE.INTERACTABLE;
-      console.log(mesh.parent.userData);
       mesh.removeFromParent();
       const roomWidth = rollDice(3, 2);
       const roomLength = rollDice(3, 2);
@@ -358,3 +369,7 @@ class GameScreen extends LitElement {
 }
 
 customElements.define("game-screen", GameScreen);
+
+/**
+ * @typedef {import('../services/FloorTile.js').FloorTile} FloorTile
+ */

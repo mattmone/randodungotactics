@@ -1,6 +1,7 @@
 import { IdbBacked } from "../utils/baseClasses/IdbBacked.js";
 import { rollDice } from "../utils/rollDice";
-import { DIRECTION, OPPOSITE_DIRECTION } from "../constants/directions";
+import { DIRECTION, OPPOSITE_DIRECTION, isEastWest, isNorthSouth } from "../constants/directions";
+import { move } from "../utils/move.js";
 import { Room } from "./Room.js";
 import { FloorTile } from "./FloorTile.js";
 import { surroundingPositions } from "../utils/surroundingPositions.js";
@@ -14,13 +15,10 @@ export class DungeonMap extends IdbBacked {
     super(id);
     this.id = id;
     this.terrain = terrain;
-    /** @type {Array.<FloorTile>} */
-    this.floorTiles = [];
   }
 
   static get serialized() {
     return {
-      floorTiles: IdbBacked.Array(FloorTile),
       rooms: IdbBacked.Array(Room),
       terrain: true,
     };
@@ -30,8 +28,12 @@ export class DungeonMap extends IdbBacked {
     return this.#rooms;
   }
 
+  get floorTiles() {
+    return this.#rooms.flatMap(room => room.floorTiles);
+  }
+
   #checkForNearbyRoom(position, direction) {
-    const checkPosition = this.#move(position, direction);
+    const checkPosition = move(position, direction);
     return Array.from(surroundingPositions(checkPosition).values()).some(
       (position) =>
         this.floorTiles.some((floorTile) => floorTile.at(checkPosition))
@@ -47,12 +49,6 @@ export class DungeonMap extends IdbBacked {
     );
   }
 
-  #move(position, direction) {
-    if ([DIRECTION.NORTH, DIRECTION.SOUTH].includes(direction))
-      return { x: position.x, z: position.z + directionModifier(direction) };
-    return { x: position.x + directionModifier(direction), z: position.z };
-  }
-
   /**
    * determine the room exits
    * @param {Room} room the room to determine possible exits fore
@@ -60,19 +56,15 @@ export class DungeonMap extends IdbBacked {
    * @param {number} count the total possible exits
    */
   async #determineRoomExits(room, entranceDirection, count) {
-    // 1: remove entranceDirection
-    const possibleExitDirections = Object.values(DIRECTION).filter(
+    let possibleExitDirections = Object.values(DIRECTION).filter(
       (direction) => direction !== entranceDirection
     );
-    // 2: check for surrounding rooms and remove any there as possible exits
     const walls = possibleExitDirections.map((direction) => ({
       direction,
       wallTiles: room.wallTiles(direction),
     }));
-    console.log(walls);
-    // 3: choose up to `count` from the remaining exits possibilities
-    let iterations = 10;
 
+    let iterations = 10;
     while (count > 0 && iterations > 0) {
       iterations--;
       const wall = oneOf(walls);
@@ -80,7 +72,7 @@ export class DungeonMap extends IdbBacked {
       if (exitTile.isExit || this.#checkForNearbyRoom(exitTile, wall.direction))
         continue;
       exitTile.makeExit(wall.direction);
-      console.log(exitTile, "exit");
+      walls.splice(walls.indexOf(wall), 1);
       count--;
     }
   }
@@ -105,7 +97,7 @@ export class DungeonMap extends IdbBacked {
    * @param {number} width - number of tiles in the room, in the x direction
    * @param length - number of tiles in the room, in the z direction
    * @param exits - number of exits from the room
-   * @param entrance - entrance point to the room
+   * @param {FloorTile} entrance - entrance point to the room
    * @return {Promise<Room|null>} - the room that was generated
    */
 
@@ -113,28 +105,36 @@ export class DungeonMap extends IdbBacked {
     width = rollDice(3, 2),
     length = rollDice(3, 2),
     exits = rollDice(5) - 1,
-    entrance = {
-      northSouth: true,
-      fromDirection: DIRECTION.NORTH,
-      position: { x: 0, z: 0 },
-    }
+    entrance = new FloorTile(undefined, {
+      x: 0,
+      z: 0
+    })
   ) {
     if (
-      this.#check(entrance.position, OPPOSITE_DIRECTION[entrance.fromDirection])
+      this.#check(entrance.position, entrance.exitDirection)
     )
       return null;
+    const hallway = new FloorTile(undefined, {...move(entrance, entrance.exitDirection), 
+      northWall: isEastWest(entrance.exitDirection),
+      southWall: isEastWest(entrance.exitDirection),
+      eastWall: isNorthSouth(entrance.exitDirection),
+      westWall: isNorthSouth(entrance.exitDirection),
+    });
     const roomDetails = {
       x:
-        entrance.position.x +
-        (entrance.northSouth
+      hallway.x +
+        (entrance.northSouthExit
           ? 0
-          : directionModifier(entrance.direction) * (width + 1)),
+          : directionModifier(entrance.exitDirection) * (width + 1)),
       z:
-        entrance.position.z +
-        (entrance.northSouth
-          ? directionModifier(entrance.direction) * (length + 1)
+      hallway.z +
+        (entrance.northSouthExit
+          ? directionModifier(entrance.exitDirection) * (length + 1)
           : 0),
-      entrance,
+      entrance: {
+        tile: hallway,
+        direction: entrance.exitDirection
+      },
       width,
       length,
     };
@@ -145,8 +145,8 @@ export class DungeonMap extends IdbBacked {
       room.dispatchEvent(new Event("destroy"));
       room = new Room(undefined, this.id, {
         ...roomDetails,
-        x: entrance.position.x,
-        z: entrance.position.z,
+        x: hallway.x,
+        z: hallway.z,
         width: 0,
         length: 0,
       });
@@ -154,7 +154,7 @@ export class DungeonMap extends IdbBacked {
       return room;
     }
 
-    await this.#determineRoomExits(room, entrance.fromDirection, exits);
+    await this.#determineRoomExits(room, OPPOSITE_DIRECTION[entrance.exitDirection], exits);
     this.#rooms.push(room);
     return room;
   }

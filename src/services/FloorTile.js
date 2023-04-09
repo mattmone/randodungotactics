@@ -11,10 +11,10 @@ export class FloorTile extends IdbBacked {
     super(id);
     this.x = tileDetails.x;
     this.z = tileDetails.z;
-    this.northWall = tileDetails.northWall;
-    this.southWall = tileDetails.southWall;
-    this.eastWall = tileDetails.eastWall;
-    this.westWall = tileDetails.westWall;
+    this.northWall = tileDetails.northWall ?? false;
+    this.southWall = tileDetails.southWall ?? false;
+    this.eastWall = tileDetails.eastWall ?? false;
+    this.westWall = tileDetails.westWall ?? false;
     this.terrain = tileDetails.terrain ?? "rock";
     this.type = tileDetails.type ?? "floor";
     this.exitDirection = tileDetails.exitDirection ?? null;
@@ -43,19 +43,20 @@ export class FloorTile extends IdbBacked {
   }
 
   get hasWall() {
-    return this.northWall || this.southWall || this.eastWall || this.westWall;
+    return this.wallDirections.length;
   }
 
   get wallDirections() {
     const directions = [];
-    if (this.northWall && this.exitDirection !== DIRECTION.NORTH)
+    if (this.northWall && this.exitDirection !== DIRECTION.NORTH && this.entranceDirection !== DIRECTION.NORTH)
       directions.push(DIRECTION.NORTH);
-    if (this.southWall && this.exitDirection !== DIRECTION.SOUTH)
+    if (this.southWall && this.exitDirection !== DIRECTION.SOUTH && this.entranceDirection !== DIRECTION.SOUTH)
       directions.push(DIRECTION.SOUTH);
-    if (this.eastWall && this.exitDirection !== DIRECTION.EAST)
+    if (this.eastWall && this.exitDirection !== DIRECTION.EAST && this.entranceDirection !== DIRECTION.EAST)
       directions.push(DIRECTION.EAST);
-    if (this.westWall && this.exitDirection !== DIRECTION.WEST)
+    if (this.westWall && this.exitDirection !== DIRECTION.WEST && this.entranceDirection !== DIRECTION.WEST)
       directions.push(DIRECTION.WEST);
+    if(this.type === 'entrance') console.log(this, directions);
     return directions;
   }
 
@@ -103,6 +104,15 @@ export class FloorTile extends IdbBacked {
   makeExit(exitDirection) {
     this.type = "exit";
     this.exitDirection = exitDirection;
+  }
+
+  /**
+   *
+   * @param {import("../../types").DIRECTION} entranceDirection
+   */
+  makeEntrance(entranceDirection) {
+    this.type = "entrance";
+    this.entranceDirection = entranceDirection
   }
 }
 

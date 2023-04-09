@@ -1,4 +1,5 @@
-import { DIRECTION } from "../constants/directions.js";
+import { DIRECTION, OPPOSITE_DIRECTION } from "../constants/directions.js";
+import { move } from "../utils/move.js";
 import { IdbBacked } from "../utils/baseClasses/IdbBacked.js";
 import { FloorTile } from "./FloorTile.js";
 
@@ -8,8 +9,8 @@ export class Room extends IdbBacked {
 
   /**
    * 
-   * @param {string} id the id of the room
-   * @param {string} mapid the id of the map the room is on
+   * @param {import("../../types.js").UUID} id the id of the room
+   * @param {import("../../types.js").UUID} mapid the id of the map the room is on
    * @param {RoomDetails} roomDetails the details of the room
    */
   constructor(
@@ -38,11 +39,18 @@ export class Room extends IdbBacked {
         );
       }
     }
-    floorTileCoordinates.push(entrance.position);
+    
     Promise.all(
       floorTileCoordinates.map(this.generateFloorTile)
     ).then((floorTiles) => {
       this.floorTiles = floorTiles;
+      this.hallway = entrance;
+      const entrancePosition = move(entrance.tile.position, entrance.direction)
+      const entranceTile = this.floorTiles.find(tile => tile.at(entrancePosition?.x, entrancePosition?.z));
+      console.log(entranceTile);
+      if(entranceTile) {
+        entranceTile.makeEntrance(OPPOSITE_DIRECTION[entrance.direction]);
+      }
       this.dispatchEvent(new Event('initialize'));
     });
   }
