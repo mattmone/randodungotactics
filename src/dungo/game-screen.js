@@ -339,6 +339,7 @@ class GameScreen extends LitElement {
         rollDice(3),
         mesh.userData.tile
       );
+      console.log(room);
       const renderedRoom = await this.renderRoom(room);
 
       this.#scene.add(renderedRoom);

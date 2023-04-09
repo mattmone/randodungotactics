@@ -8,6 +8,11 @@ import { surroundingPositions } from "../utils/surroundingPositions.js";
 import { directionModifier } from "../utils/directionModifier.js";
 import { oneOf } from "../utils/oneOf.js";
 
+/**
+ * @typedef {import("../../types.js").Position} Position
+ * @typedef {import("../../types.js").DIRECTION} DIRECTION
+ */
+
 export class DungeonMap extends IdbBacked {
   /** @type {Array.<Room>} */
   #rooms = [];
@@ -29,24 +34,34 @@ export class DungeonMap extends IdbBacked {
   }
 
   get floorTiles() {
-    return this.#rooms.flatMap(room => room.floorTiles);
+    return this.#rooms.flatMap((room) => room.floorTiles);
   }
 
+  /**
+   *
+   * @param {Position} position
+   * @param {DIRECTION} direction
+   * @returns
+   */
   #checkForNearbyRoom(position, direction) {
     const checkPosition = move(position, direction);
-    return Array.from(surroundingPositions(checkPosition).values()).some(
-      (position) =>
-        this.floorTiles.some((floorTile) => floorTile.at(checkPosition))
-    );
+    return Boolean(this.#check(checkPosition, direction));
   }
 
   #verifyExitPossibility(direction, room) {}
 
+  /**
+   *
+   * @param {Position} position
+   * @param {DIRECTION} direction
+   * @returns {FloorTile|undefined}
+   */
   #check(position = { x: 0, z: 0 }, direction) {
     const adjacentPositions = surroundingPositions(position);
-    return this.floorTiles.find((floorTile) =>
-      floorTile.at(adjacentPositions.get(direction))
-    );
+    /** @type {Position} */
+    const { x, z } = adjacentPositions.get(direction) ?? position;
+
+    return this.floorTiles.find((floorTile) => floorTile.at(x, z));
   }
 
   /**
@@ -107,14 +122,11 @@ export class DungeonMap extends IdbBacked {
     exits = rollDice(5) - 1,
     entrance = new FloorTile(undefined, {
       x: 0,
-      z: 0
+      z: 0,
     })
   ) {
-    if (
-      this.#check(entrance.position, entrance.exitDirection)
-    )
-      return null;
-    const hallway = new FloorTile(undefined, {...move(entrance, entrance.exitDirection), 
+    const hallway = new FloorTile(undefined, {
+      ...move(entrance, entrance.exitDirection),
       northWall: isEastWest(entrance.exitDirection),
       southWall: isEastWest(entrance.exitDirection),
       eastWall: isNorthSouth(entrance.exitDirection),
@@ -122,18 +134,18 @@ export class DungeonMap extends IdbBacked {
     });
     const roomDetails = {
       x:
-      hallway.x +
+        hallway.x +
         (entrance.northSouthExit
           ? 0
           : directionModifier(entrance.exitDirection) * (width + 1)),
       z:
-      hallway.z +
+        hallway.z +
         (entrance.northSouthExit
           ? directionModifier(entrance.exitDirection) * (length + 1)
           : 0),
       entrance: {
         tile: hallway,
-        direction: entrance.exitDirection
+        direction: entrance.exitDirection,
       },
       width,
       length,
@@ -154,7 +166,13 @@ export class DungeonMap extends IdbBacked {
       return room;
     }
 
-    await this.#determineRoomExits(room, OPPOSITE_DIRECTION[entrance.exitDirection], exits);
+    console.log(room);
+
+    await this.#determineRoomExits(
+      room,
+      OPPOSITE_DIRECTION[entrance.exitDirection],
+      exits
+    );
     this.#rooms.push(room);
     return room;
   }

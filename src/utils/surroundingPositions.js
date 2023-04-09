@@ -3,7 +3,7 @@ import { DIRECTION } from "../constants/directions.js";
 /**
  * 
  * @param {import("../../types.js").Position} position 
- * @returns 
+ * @returns {Map<import("../../types.js").DIRECTION, import("../../types.js").Position>}
  */
 export function surroundingPositions(position) {
   const directionKeys = new Map();
