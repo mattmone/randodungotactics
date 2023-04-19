@@ -101,14 +101,21 @@ class GameScreen extends LitElement {
     const firstRoom = await this.#map.generateRoom(
       rollDice(3, 2),
       rollDice(3, 2),
-      1
+      rollDice(4)
     );
     await firstRoom.initialized;
     const renderedRoom = await this.renderRoom(firstRoom);
     this.#scene.add(renderedRoom);
 
-    this.playerCrew.leader.avatar.mesh.position.set(0, 0, 0);
-    this.playerCrew.leader.avatar.mesh.scale.set(0.05, 0.05, 0.05);
+    this.playerCrew.leader.tile = oneOf(firstRoom?.floorTiles);
+    const entrancePosition = this.playerCrew.leader.tile.position;
+    this.playerCrew.leader.avatar.mesh.position.set(
+      entrancePosition.x,
+      0,
+      entrancePosition.z
+    );
+    this.#focalPoint.position.set(entrancePosition.x, 0, entrancePosition.z);
+    this.playerCrew.leader.avatar.mesh.scale.set(0.04, 0.04, 0.04);
     this.#scene.add(this.playerCrew.leader.avatar.mesh);
     this.#focalPoint.add(this.#camera);
     this.#scene.add(this.#focalPoint);
@@ -145,6 +152,7 @@ class GameScreen extends LitElement {
     box.userData = {
       type: options.type ?? TYPE.INTERACTABLE,
       action: options.action ?? ACTION.MOVE,
+      tile: floorTile
     };
     if (floorTile.hasWall) {
       const walls = this.#generateWalls(floorTile);
@@ -154,6 +162,7 @@ class GameScreen extends LitElement {
       const exit = this.#generateExit(floorTile, options);
       box.add(exit);
     }
+    floorTile.mesh = box;
     return box;
   }
 
@@ -178,9 +187,13 @@ class GameScreen extends LitElement {
       doorMaterial
     );
     door.position.set(
-      exitTile.northSouthExit ? 0 : directionModifier(exitTile.exitDirection) * 0.5,
+      exitTile.northSouthExit
+        ? 0
+        : directionModifier(exitTile.exitDirection) * 0.5,
       1,
-      exitTile.northSouthExit ? directionModifier(exitTile.exitDirection) * 0.5 : 0,
+      exitTile.northSouthExit
+        ? directionModifier(exitTile.exitDirection) * 0.5
+        : 0
     );
     door.userData = {
       type: TYPE.INTERACTABLE,
@@ -191,7 +204,7 @@ class GameScreen extends LitElement {
   }
 
   /**
-   * 
+   *
    * @param {FloorTile} wallTile the floor tile of the wall
    * @returns {Wall}
    */
@@ -200,17 +213,20 @@ class GameScreen extends LitElement {
     const texture = new CanvasTexture(textureCanvas);
     const walls = wallTile.wallDirections.map((direction) => [
       direction,
-      this.#generateWall(direction, new MeshBasicMaterial({
-        map: texture,
-      })),
+      this.#generateWall(
+        direction,
+        new MeshBasicMaterial({
+          map: texture,
+        })
+      ),
     ]);
-    
+
     return Object.fromEntries(walls);
   }
 
   #generateWall(direction, material) {
     let wallHeight = 2;
-    if([DIRECTION.SOUTH, DIRECTION.EAST].includes(direction)) {
+    if ([DIRECTION.SOUTH, DIRECTION.EAST].includes(direction)) {
       material.transparent = true;
       material.opacity = 0.6;
     }
@@ -227,7 +243,7 @@ class GameScreen extends LitElement {
       -0.5 + wallHeight / 2,
       isNorthSouth(direction) ? directionModifier(direction) * 0.5 : 0
     );
-    
+
     return wall;
   }
 
@@ -238,7 +254,7 @@ class GameScreen extends LitElement {
    */
   async renderRoom(room) {
     const group = new Group();
-    if(room.hallway) {
+    if (room.hallway) {
       group.add(this.#generateFloorBox(room.hallway.tile));
     }
     room.floorTiles.forEach((floorTile) => {
@@ -297,6 +313,18 @@ class GameScreen extends LitElement {
     }
   }
 
+  highlightMesh(mesh) {
+    mesh.userData.materialMap =
+        mesh.material.map;
+    mesh.material.map = new CanvasTexture(
+      createTerrainSide("highlight")
+    );
+  }
+
+  unhighlightMesh(mesh) {
+    mesh.material.map = mesh.userData.materialMap;
+  }
+
   pointerMove(event) {
     const { buttons, offsetX: x, offsetY: y } = event;
     this.#mousePosition.x = (x / this.#canvas.width) * 2 - 1;
@@ -304,15 +332,12 @@ class GameScreen extends LitElement {
     this.highlightIntersection();
   }
 
-  async pointerClick(event) {
-    if (this.intersectedObject.userData.action === ACTION.MOVE) {
-      const characterEndPosition = copyVector(
-        this.intersectedObject.position
-      ).add(copyVector(this.intersectedObject.parent.position));
+  #movePlayerAndFocusPoint(characterEndPosition) {
+    return Promise.all([
       this.#animationCollection.createMoveAnimation({
         character: this.playerCrew.leader,
         endPosition: characterEndPosition,
-      });
+      }),
       this.#animationCollection
         .createMoveAnimation({
           mesh: this.#focalPoint,
@@ -321,11 +346,26 @@ class GameScreen extends LitElement {
         })
         .then(() =>
           this.#scene.children.forEach((mesh) => mesh.updateMatrixWorld())
-        );
-    } else if (this.intersectedObject.userData.action === ACTION.OPEN) {
+        ),
+    ]);
+  }
+
+  #clickHandlers = {
+    [ACTION.MOVE]: async (endMesh = this.intersectedObject.getObjectById(this.intersectedObject.id)) => {
+      const path = await this.#map.findPath(this.playerCrew.leader.avatar?.mesh?.position, endMesh.position);
+      this.unhighlightMesh(endMesh);
+      for(const tile of path) {
+        this.highlightMesh(tile.mesh);
+        await this.#movePlayerAndFocusPoint(new Vector3(tile.position.x, 0, tile.position.z));
+        this.unhighlightMesh(tile.mesh);
+      }
+    },
+    [ACTION.OPEN]: async () => {
+      const object = this.intersectedObject.getObjectById(this.intersectedObject.id);
+      await this.#clickHandlers[ACTION.MOVE](object.parent);
       const { mesh } = await this.#animationCollection.createMoveAnimation({
-        mesh: this.intersectedObject,
-        endPointVector: this.intersectedObject.position.clone().setY(0),
+        mesh: object,
+        endPointVector: object.position.clone().setY(0),
         faceEndPoint: false,
       });
       mesh.parent.userData.type = TYPE.INTERACTABLE;
@@ -339,11 +379,20 @@ class GameScreen extends LitElement {
         rollDice(3),
         mesh.userData.tile
       );
-      console.log(room);
       const renderedRoom = await this.renderRoom(room);
 
       this.#scene.add(renderedRoom);
-    }
+    },
+  };
+
+  /**
+   *
+   * @param {PointerEvent} event
+   * @returns
+   */
+  async pointerClick(event) {
+    if (!this.intersectedObject?.userData?.action) return;
+    this.#clickHandlers[this.intersectedObject.userData.action]?.();
   }
 
   renderCanvas() {

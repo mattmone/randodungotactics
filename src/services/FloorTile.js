@@ -1,10 +1,16 @@
 import { DIRECTION, OPPOSITE_DIRECTION } from "../constants/directions";
 import { IdbBacked } from "../utils/baseClasses/IdbBacked";
 
+/**
+ * @typedef {import('../../types').TileDetails} TileDetails
+ * @typedef {import("../../types").DIRECTION} DIRECTION
+ * @typedef {import("../../types").UUID} UUID
+ */
+
 export class FloorTile extends IdbBacked {
   /**
    *
-   * @param {import("../../types").UUID} id the id of the floorTile
+   * @param {UUID} id the id of the floorTile
    * @param {TileDetails} tileDetails the details of the floorTile
    */
   constructor(id = crypto.randomUUID(), tileDetails) {
@@ -18,6 +24,10 @@ export class FloorTile extends IdbBacked {
     this.terrain = tileDetails.terrain ?? "rock";
     this.type = tileDetails.type ?? "floor";
     this.exitDirection = tileDetails.exitDirection ?? null;
+    this.entranceDirection = tileDetails.entranceDirection ?? null;
+    this.room = tileDetails.room ?? null;
+    this.fromRoom = tileDetails.fromRoom ?? null;
+    this.toRoom = tileDetails.toRoom ?? null;
   }
 
   static get serialized() {
@@ -31,7 +41,12 @@ export class FloorTile extends IdbBacked {
       terrain: true,
       type: true,
       exitDirection: true,
+      entranceDirection: true,
     };
+  }
+
+  get connectingRoom() {
+    return this.fromRoom ?? this.toRoom;
   }
 
   get key() {
@@ -48,15 +63,30 @@ export class FloorTile extends IdbBacked {
 
   get wallDirections() {
     const directions = [];
-    if (this.northWall && this.exitDirection !== DIRECTION.NORTH && this.entranceDirection !== DIRECTION.NORTH)
+    if (
+      this.northWall &&
+      this.exitDirection !== DIRECTION.NORTH &&
+      this.entranceDirection !== DIRECTION.NORTH
+    )
       directions.push(DIRECTION.NORTH);
-    if (this.southWall && this.exitDirection !== DIRECTION.SOUTH && this.entranceDirection !== DIRECTION.SOUTH)
+    if (
+      this.southWall &&
+      this.exitDirection !== DIRECTION.SOUTH &&
+      this.entranceDirection !== DIRECTION.SOUTH
+    )
       directions.push(DIRECTION.SOUTH);
-    if (this.eastWall && this.exitDirection !== DIRECTION.EAST && this.entranceDirection !== DIRECTION.EAST)
+    if (
+      this.eastWall &&
+      this.exitDirection !== DIRECTION.EAST &&
+      this.entranceDirection !== DIRECTION.EAST
+    )
       directions.push(DIRECTION.EAST);
-    if (this.westWall && this.exitDirection !== DIRECTION.WEST && this.entranceDirection !== DIRECTION.WEST)
+    if (
+      this.westWall &&
+      this.exitDirection !== DIRECTION.WEST &&
+      this.entranceDirection !== DIRECTION.WEST
+    )
       directions.push(DIRECTION.WEST);
-    if(this.type === 'entrance') console.log(this, directions);
     return directions;
   }
 
@@ -81,6 +111,10 @@ export class FloorTile extends IdbBacked {
     return this.type === "exit";
   }
 
+  get isEntrance() {
+    return this.type === "entrance";
+  }
+
   get northSouthExit() {
     return this.isExit
       ? [DIRECTION.NORTH, DIRECTION.SOUTH].includes(this.exitDirection)
@@ -99,7 +133,7 @@ export class FloorTile extends IdbBacked {
 
   /**
    *
-   * @param {import("../../types").DIRECTION} exitDirection
+   * @param {DIRECTION} exitDirection
    */
   makeExit(exitDirection) {
     this.type = "exit";
@@ -108,14 +142,11 @@ export class FloorTile extends IdbBacked {
 
   /**
    *
-   * @param {import("../../types").DIRECTION} entranceDirection
+   * @param {DIRECTION} entranceDirection
    */
-  makeEntrance(entranceDirection) {
+  makeEntrance(entranceDirection, fromRoom) {
     this.type = "entrance";
-    this.entranceDirection = entranceDirection
+    this.entranceDirection = entranceDirection;
+    this.fromRoom = fromRoom;
   }
 }
-
-/**
- * @typedef {import('../../types').TileDetails} TileDetails
- */

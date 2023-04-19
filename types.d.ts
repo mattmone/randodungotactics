@@ -1,5 +1,8 @@
 import { DIRECTIONS } from './constants';
 import { FloorTile } from './dist/services/FloorTile';
+import {Vector3} from './src/libs/three.module.js';
+
+export type Vector3 = Vector3;
 
 export type UUID = `${string}-${string}-${string}-${string}-${string}`;
 
@@ -13,6 +16,7 @@ export type TileDetails = {
   terrain?: string;
   type?: string;
   exitDirection?: Direction|null;
+  entranceDirection?: Direction|null;
 }
 
 export type RoomDetails = {
@@ -21,7 +25,10 @@ export type RoomDetails = {
   width: number;
   length: number;
   terrain?: string;
-  entrance?: FloorTile
+  entrance?: {
+    tile: FloorTile
+    direction: DIRECTION
+  }
 }
 
 export type Position = {

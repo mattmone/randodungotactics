@@ -1,6 +1,11 @@
 import { IdbBacked } from "../utils/baseClasses/IdbBacked.js";
 import { rollDice } from "../utils/rollDice";
-import { DIRECTION, OPPOSITE_DIRECTION, isEastWest, isNorthSouth } from "../constants/directions";
+import {
+  DIRECTION,
+  OPPOSITE_DIRECTION,
+  isEastWest,
+  isNorthSouth,
+} from "../constants/directions";
 import { move } from "../utils/move.js";
 import { Room } from "./Room.js";
 import { FloorTile } from "./FloorTile.js";
@@ -48,8 +53,6 @@ export class DungeonMap extends IdbBacked {
     return Boolean(this.#check(checkPosition, direction));
   }
 
-  #verifyExitPossibility(direction, room) {}
-
   /**
    *
    * @param {Position} position
@@ -84,7 +87,10 @@ export class DungeonMap extends IdbBacked {
       iterations--;
       const wall = oneOf(walls);
       const exitTile = oneOf(wall.wallTiles);
-      if (exitTile.isExit || this.#checkForNearbyRoom(exitTile, wall.direction))
+      if (
+        exitTile?.isExit ||
+        this.#checkForNearbyRoom(exitTile, wall.direction)
+      )
         continue;
       exitTile.makeExit(wall.direction);
       walls.splice(walls.indexOf(wall), 1);
@@ -131,6 +137,7 @@ export class DungeonMap extends IdbBacked {
       southWall: isEastWest(entrance.exitDirection),
       eastWall: isNorthSouth(entrance.exitDirection),
       westWall: isNorthSouth(entrance.exitDirection),
+      fromRoom: entrance.room,
     });
     const roomDetails = {
       x:
@@ -149,24 +156,23 @@ export class DungeonMap extends IdbBacked {
       },
       width,
       length,
+      path: entrance.room?.path
     };
     let room = new Room(undefined, this.id, roomDetails);
     await room.initialized;
+    hallway.toRoom = room;
+    entrance.toRoom = room;
 
     if (this.#roomOverlaps(room)) {
       room.dispatchEvent(new Event("destroy"));
-      room = new Room(undefined, this.id, {
-        ...roomDetails,
-        x: hallway.x,
-        z: hallway.z,
-        width: 0,
-        length: 0,
-      });
+      roomDetails.x = hallway.x;
+      roomDetails.z = hallway.z;
+      roomDetails.width = 0;
+      roomDetails.length = 0;
+      room = new Room(undefined, this.id, roomDetails);
       await room.initialized;
       return room;
     }
-
-    console.log(room);
 
     await this.#determineRoomExits(
       room,
@@ -176,4 +182,50 @@ export class DungeonMap extends IdbBacked {
     this.#rooms.push(room);
     return room;
   }
+
+  /**
+   * 
+   * @param {Vector3} position the position of the tile to find
+   * @returns {FloorTile|undefined}
+   */
+  #getTileAtPosition(position) {
+    return this.floorTiles.find((tile) => tile.at(position.x, position.z));
+  }
+
+  /**
+   *
+   * @param {Vector3} startTilePosition the tile position to start from
+   * @param {Vector3} endTilePosition the tile position to end at
+   * @returns {Promise<Array.<FloorTile>>}
+   */
+  async findPath(startTilePosition, endTilePosition) {
+    const startTile = this.#getTileAtPosition(startTilePosition);
+    const endTile = this.#getTileAtPosition(endTilePosition);
+    if(!startTile) throw new Error(`no tile found at start position, ${startTilePosition}`)
+    if(!endTile) throw new Error(`no tile found at start position, ${endTilePosition}`)
+    const startRoom = startTile.room;
+    const endRoom = endTile.room;
+    if (startRoom === endRoom) {
+      return startRoom.findPath(startTile, endTile);
+    }
+    const firstIntersection = startRoom.path.findLast(room => endRoom.path.includes(room));
+    const startPathReversed = startRoom.path.slice(startRoom.path.indexOf(firstIntersection)).reverse();
+    const roomPath = Array.from(new Set([...startPathReversed, ...endRoom.path.slice(endRoom.path.indexOf(firstIntersection))]));
+    const path = [];
+    let currentTile = startTile;
+    do {
+      const currentRoom = roomPath.shift();
+      const nextRoom = roomPath[0];
+      const currentRoomExit = currentRoom.exploredExitTiles.find(tile => [tile.toRoom, tile.fromRoom].includes(nextRoom));
+      const nextRoomEntrance = nextRoom?.exploredExitTiles?.find?.(tile => [tile.toRoom, tile.fromRoom].includes(currentRoom));
+      const roomPathTiles = await currentRoom.findPath(currentTile, currentRoomExit ?? endTile);
+      currentTile = nextRoomEntrance;
+      path.push(...roomPathTiles, nextRoomEntrance);
+    } while(roomPath.length > 0);
+    return [...path, endTile].filter(Boolean);
+  }
 }
+
+/**
+ * @typedef {import('../../types.js').Vector3} Vector3
+ */

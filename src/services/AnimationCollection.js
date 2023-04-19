@@ -57,7 +57,7 @@ export class AnimationCollection {
           endPosition.z
         );
       }
-      const animationTiming = startPosition.distanceTo(endPointVector) / 2;
+      const animationTiming = startPosition.distanceTo(endPointVector) / 4;
       const track = new VectorKeyframeTrack(
         ".position",
         [0, animationTiming],
