@@ -1,4 +1,4 @@
-import {get} from '../libs/idb-keyval.js';
+import {get} from 'idb-keyval';
 
 class OpeningScreen extends HTMLElement {
 	connectedCallback() {

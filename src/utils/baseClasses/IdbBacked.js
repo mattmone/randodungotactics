@@ -1,8 +1,11 @@
 import { Initializable } from "./Initializable.js";
-import { get, set, del, createStore } from "../../libs/idb-keyval.js";
+import { get, set, del, createStore } from "idb-keyval";
 
 export class IdbBacked extends Initializable {
-  #idbStore = createStore(this.constructor.name, `${this.constructor.name}Store`);
+  #idbStore = createStore(
+    this.constructor.name,
+    `${this.constructor.name}Store`
+  );
   #saveTimeout = null;
   #destroyed = false;
   #deleting = false;
@@ -10,12 +13,12 @@ export class IdbBacked extends Initializable {
   #serializedProperties = new Map();
 
   get idbStore() {
-    return this.#idbStore
+    return this.#idbStore;
   }
-  
+
   /**
    * initialize the callbacks for an Array.<IdbBacked> property
-   * @param {IdbBacked} ExtendedIdbBackedClass 
+   * @param {IdbBacked} ExtendedIdbBackedClass
    * @returns {SerializedCallbacks}
    */
   static Array(ExtendedIdbBackedClass) {
@@ -26,47 +29,70 @@ export class IdbBacked extends Initializable {
        * @param {string} property the name of the property to be backed by idb
        * @returns {void}
        */
-      serialize: (instance, property) => instance[property].map(prop => prop.id),
+      serialize: (instance, property) =>
+        instance[property].map((prop) => prop.id),
       /**
-       * 
+       *
        * @param {IdbBacked} instance the instance of an IdbBacked class
        * @param {string} property the name of the property to be backed by idb
        * @param {any} propDetails the details of the property to be backed by idb
-       * @returns 
+       * @returns
        */
-      deserialize: async (instance, property, propDetails) => await Promise.all(propDetails.map(
-        /**
-         * 
-         * @param {string} propid the id of the property backed by idb
-         * @returns {IdbBacked} an instance of an IdbBacked class
-         */
-        propid => new ExtendedIdbBackedClass(propid)).map(item => item.initialized)),
-      destroy: (instance, property) => instance[property].forEach(prop => prop.dispatchEvent(new Event('destroy')))
-    }
+      deserialize: async (instance, property, propDetails) =>
+        !propDetails ? [] : await Promise.all(
+          propDetails
+            .map(
+              /**
+               *
+               * @param {string} propid the id of the property backed by idb
+               * @returns {IdbBacked} an instance of an IdbBacked class
+               */
+              (propid) => new ExtendedIdbBackedClass(propid)
+            )
+            .map((item) => item.initialized)
+        ),
+      destroy: (instance, property) =>
+        instance[property].forEach((prop) =>
+          prop.dispatchEvent(new Event("destroy"))
+        ),
+    };
   }
 
   static Set(ExtendedIdbBackedClass) {
     return {
-      serialize: (instance, property) => new Set(Array.from(instance[property]).map(prop => prop.id)),
-      deserialize: async (instance, property, propDetails) => new Set(await Promise.all(Array.from(propDetails).map(propid => new ExtendedIdbBackedClass(propid)).map(item => item.initialized))),
-      destroy: (instance, property) => instance[property].forEach(prop => prop.dispatchEvent(new Event('destroy')))
-    }
+      serialize: (instance, property) =>
+        new Set(Array.from(instance[property]).map((prop) => prop.id)),
+      deserialize: async (instance, property, propDetails) =>
+        new Set(
+          await Promise.all(
+            Array.from(propDetails)
+              .map((propid) => new ExtendedIdbBackedClass(propid))
+              .map((item) => item.initialized)
+          )
+        ),
+      destroy: (instance, property) =>
+        instance[property].forEach((prop) =>
+          prop.dispatchEvent(new Event("destroy"))
+        ),
+    };
   }
 
   constructor(id = crypto.randomUUID()) {
     super();
     this.id = id;
-    get(id, this.#idbStore).then(details => {
-      if(!details) throw new Error('no Room')
-      return this.deserialize(details)
-    }).then(() => {
-      this.dispatchEvent(new Event('initialize'));
-    }).catch(() => {
-      return {};
-    });
+    get(id, this.#idbStore)
+      .then((details) => {
+        return this.deserialize(details);
+      })
+      .then(() => {
+        this.dispatchEvent(new Event("initialize"));
+      })
+      .catch(() => {
+        return {};
+      });
     this.#setupSerializedProperties();
-    this.addEventListener('save', () => this.#save());
-    this.addEventListener('destroy', () => this.#destroy());
+    this.addEventListener("save", () => this.#save());
+    this.addEventListener("destroy", () => this.#destroy());
   }
 
   //#region Private Accessors
@@ -84,27 +110,27 @@ export class IdbBacked extends Initializable {
    * @returns {Promise.<IdbBacked|undefined>} returns the instance if unable to delete, otherwise undefined
    */
   get deleted() {
-    if(!this.#destroyed || !this.#deleting) return Promise.resolve(this);
-    return new Promise(resolve => {
-      this.addEventListener('deleted', () => resolve(undefined));
-    })
+    if (!this.#destroyed || !this.#deleting) return Promise.resolve(this);
+    return new Promise((resolve) => {
+      this.addEventListener("deleted", () => resolve(undefined));
+    });
   }
 
   /**
    * @returns {boolean}
    */
   get destroyed() {
-    return this.#destroyed
+    return this.#destroyed;
   }
 
   /**
    * @returns {Promise.<IdbBacked>} returns the instance when the save is finished
    */
   get saved() {
-    if(!this.#saving) return Promise.resolve(this);
-    return new Promise(resolve => {
-      this.addEventListener('saved', () => resolve(this));
-    })
+    if (!this.#saving) return Promise.resolve(this);
+    return new Promise((resolve) => {
+      this.addEventListener("saved", () => resolve(this));
+    });
   }
 
   /**
@@ -112,26 +138,38 @@ export class IdbBacked extends Initializable {
    */
   get serialized() {
     const properties = this.#serializableKeys;
-    return {id: this.id, ...Object.fromEntries(properties.map(property => {
-      if(this.#serializableProperties[property]?.serialize && this[property]) return [property, this.#serializableProperties[property].serialize(this, property)];
-      return [property, this[property]];
-    }))}
+    return {
+      id: this.id,
+      ...Object.fromEntries(
+        properties.map((property) => {
+          if (
+            this.#serializableProperties[property]?.serialize &&
+            this[property]
+          )
+            return [
+              property,
+              this.#serializableProperties[property].serialize(this, property),
+            ];
+          return [property, this[property]];
+        })
+      ),
+    };
   }
   //#endregion
 
   //#region Private Methods
   #setupSerializedProperties() {
     const properties = this.#serializableKeys;
-    for(const property of properties) {
+    for (const property of properties) {
       Object.defineProperty(this, property, {
         get() {
           return this.#serializedProperties.get(property);
         },
-      
+
         set(value) {
           this.#serializedProperties.set(property, value);
           this.#save();
-        }
+        },
       });
     }
   }
@@ -139,12 +177,12 @@ export class IdbBacked extends Initializable {
   #destroy() {
     this.#destroyed = true;
     this.#deleting = true;
-    this.#serializableKeys.forEach(property => {
-      if(this.#serializableProperties[property]?.destroy && this[property]) 
+    this.#serializableKeys.forEach((property) => {
+      if (this.#serializableProperties[property]?.destroy && this[property])
         this.#serializableProperties[property]?.destroy(this, property);
     });
     del(this.id, this.#idbStore).then(() => {
-      this.dispatchEvent(new Event('deleted'));
+      this.dispatchEvent(new Event("deleted"));
       this.#deleting = false;
     });
   }
@@ -153,21 +191,28 @@ export class IdbBacked extends Initializable {
     this.#saving = true;
     clearTimeout(this.#saveTimeout);
     this.#saveTimeout = setTimeout(async () => {
-      if(this.#destroyed) return;
+      if (this.#destroyed) return;
       await set(this.id, this.serialized, this.#idbStore);
       this.#saving = false;
-      this.dispatchEvent(new Event('saved'));
-    }, 50)
+      this.dispatchEvent(new Event("saved"));
+    }, 50);
   }
   //#endregion
 
   //#region Public Methods
   async deserialize(details) {
-    if(!details) return;
+    console.log('deserializing', details)
+    if (!details) return;
     const properties = this.#serializableKeys;
-    for(let property of properties) {
-      if(this.#serializableProperties[property]?.deserialize && details[property]) {
-        this[property] = await this.#serializableProperties[property].deserialize(this, property, details[property]);
+    
+    for (let property of properties) {
+      if (
+        this.#serializableProperties[property]?.deserialize &&
+        details[property]
+      ) {
+        this[property] = await this.#serializableProperties[
+          property
+        ].deserialize(this, property, details[property]);
       } else {
         this[property] = details[property];
       }

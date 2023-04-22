@@ -37,23 +37,23 @@
  * @property {Number} y
  * @property {Number} z
  */
-import { DIRECTION } from '../constants/directions.js';
+import { DIRECTION } from "../constants/directions.js";
 
-import { Avatar } from './Avatar.js';
-import { get, set, del, createStore } from '../libs/idb-keyval.js';
-import { Weapon } from '../items/Weapon.js';
-import { Body } from '../items/Body.js';
-import { Hands } from '../items/Hands.js';
-import { Head } from '../items/Head.js';
-import { Boots } from '../items/Boots.js';
-import { Item } from '../items/Item.js';
+import { Avatar } from "./Avatar.js";
+import { get, set, del, createStore } from "idb-keyval";
+import { Weapon } from "../items/Weapon.js";
+import { Body } from "../items/Body.js";
+import { Hands } from "../items/Hands.js";
+import { Head } from "../items/Head.js";
+import { Boots } from "../items/Boots.js";
+import { Item } from "../items/Item.js";
 
-import { skillModifier } from '../utils/skillModifier.js';
-import { statModifier } from '../utils/statModifier.js';
-import { LoopOnce } from '../libs/three.module.js';
-import { Initializable } from '../utils/baseClasses/Initializable.js';
+import { skillModifier } from "../utils/skillModifier.js";
+import { statModifier } from "../utils/statModifier.js";
+import { LoopOnce } from "../libs/three.module.js";
+import { Initializable } from "../utils/baseClasses/Initializable.js";
 
-const idbStore = createStore('characters', 'characterStore');
+const idbStore = createStore("characters", "characterStore");
 
 export class Character extends Initializable {
   /** @type {Timeout} */
@@ -89,13 +89,13 @@ export class Character extends Initializable {
    */
   constructor({
     id,
-    name = '',
+    name = "",
     colorOffset = {},
     stats = new Map([
-      ['strength', { level: 1, progression: 0 }],
-      ['dexterity', { level: 1, progression: 0 }],
-      ['constitution', { level: 1, progression: 0 }],
-      ['intellect', { level: 1, progression: 0 }],
+      ["strength", { level: 1, progression: 0 }],
+      ["dexterity", { level: 1, progression: 0 }],
+      ["constitution", { level: 1, progression: 0 }],
+      ["intellect", { level: 1, progression: 0 }],
     ]),
     skills = new Map(),
     position = false,
@@ -137,7 +137,7 @@ export class Character extends Initializable {
         Array.from(this.equipment.entries()).map(([placement, item]) => [
           placement,
           item.serialized,
-        ]),
+        ])
       ),
       direction: this.direction,
       hp: this.hp,
@@ -155,7 +155,7 @@ export class Character extends Initializable {
   }
 
   async #hydrate(id) {
-    const character = await get(id, idbStore) || {};
+    const character = (await get(id, idbStore)) || {};
     this.#initialize(character);
   }
 
@@ -186,17 +186,17 @@ export class Character extends Initializable {
     this.equipment = new Map(
       equipment
         ? await Promise.all(
-          Array.from(equipment.entries())
-            .filter(([key, value]) => value)
-            .map(async ([key, value]) => [key, await Item.retrieve(value)]),
-        )
-        : [],
+            Array.from(equipment.entries())
+              .filter(([key, value]) => value)
+              .map(async ([key, value]) => [key, await Item.retrieve(value)])
+          )
+        : []
     );
     this.direction = direction;
     this.hp = hp;
     this.mana = mana;
     this.#created = created;
-    this.dispatchEvent(new Event('initialize'));
+    this.dispatchEvent(new Event("initialize"));
   }
 
   #saveCharacter() {
@@ -230,24 +230,28 @@ export class Character extends Initializable {
     this.#saveCharacter();
   }
   get strength() {
-    return this.#stats.get('strength');
+    return this.#stats.get("strength");
   }
   get dexterity() {
-    return this.#stats.get('dexterity');
+    return this.#stats.get("dexterity");
   }
   get constitution() {
-    return this.#stats.get('constitution');
+    return this.#stats.get("constitution");
   }
   get intellect() {
-    return this.#stats.get('intellect');
+    return this.#stats.get("intellect");
   }
   /** @type {ProgressionStructure} */
   get magic() {
-    return { level: Math.round((this.constitution.level + this.intellect.level) / 2) };
+    return {
+      level: Math.round((this.constitution.level + this.intellect.level) / 2),
+    };
   }
   /** @type {ProgressionStructure} */
   get speed() {
-    return { level: Math.round((this.strength.level + this.dexterity.level) / 2) };
+    return {
+      level: Math.round((this.strength.level + this.dexterity.level) / 2),
+    };
   }
   get skills() {
     return this.#skills;
@@ -303,8 +307,8 @@ export class Character extends Initializable {
   get availableHands() {
     return (
       2 -
-      (this.equipment.get('primary hand')?.hands || 0) -
-      (this.equipment.get('secondary hand')?.hands || 0)
+      (this.equipment.get("primary hand")?.hands || 0) -
+      (this.equipment.get("secondary hand")?.hands || 0)
     );
   }
 
@@ -320,26 +324,31 @@ export class Character extends Initializable {
   }
 
   get attackRange() {
-    return this.equipment.get('primary hand')?.range || 1;
+    return this.equipment.get("primary hand")?.range || 1;
   }
 
   get primaryAttack() {
-    return this.equipment.get('primary hand')?.category || 'melee';
+    return this.equipment.get("primary hand")?.category || "melee";
   }
 
   get damage() {
-    const primary = this.equipment.get('primary hand') ?? {
-      subType: 'unarmed',
-      skill: 'unarmed',
+    const primary = this.equipment.get("primary hand") ?? {
+      subType: "unarmed",
+      skill: "unarmed",
       hands: 1,
       range: 1,
-      category: 'melee',
-      strength: Math.round(this.stats.get('strength').level / 2),
-      power: Math.round(this.stats.get('dexterity').level / 2),
+      category: "melee",
+      strength: Math.round(this.stats.get("strength").level / 2),
+      power: Math.round(this.stats.get("dexterity").level / 2),
     };
     const skill = this.skills.get(primary.skill)?.level || 0;
     return [
-      Math.max(1, Math.round(primary.strength * statModifier(this.stats.get('strength').level))),
+      Math.max(
+        1,
+        Math.round(
+          primary.strength * statModifier(this.stats.get("strength").level)
+        )
+      ),
       Math.max(1, Math.round(primary.power * skillModifier(skill))),
     ];
   }
@@ -355,24 +364,19 @@ export class Character extends Initializable {
   get move() {
     return Math.max(
       2,
-      2 * statModifier(this.stats.get('dexterity').level) + (this.modifiers.get('move') ?? 0),
+      2 * statModifier(this.stats.get("dexterity").level) +
+        (this.modifiers.get("move") ?? 0)
     );
   }
 
   /** @type {Number} */
   get maxhp() {
-    return (
-      this.stats.get('constitution').level * 10 +
-      (this.modifiers.hp ?? 0)
-    );
+    return this.stats.get("constitution").level * 10 + (this.modifiers.hp ?? 0);
   }
 
   /** @type {Number} */
   get maxmana() {
-    return (
-      this.stats.get('intellect').level * 10 +
-      (this.modifiers.mana ?? 0)
-    );
+    return this.stats.get("intellect").level * 10 + (this.modifiers.mana ?? 0);
   }
 
   get passable() {
@@ -426,8 +430,8 @@ export class Character extends Initializable {
 
   get handsFull() {
     return (
-      (this.equipment.get('primary hand')?.hands || 0) +
-      (this.equipment.get('secondary hand')?.hands || 0) >=
+      (this.equipment.get("primary hand")?.hands || 0) +
+        (this.equipment.get("secondary hand")?.hands || 0) >=
       2
     );
   }
@@ -449,7 +453,7 @@ export class Character extends Initializable {
    */
   async die() {
     this.#dead = true;
-    this.avatar.swapAnimation('die', { clamp: true, loop: LoopOnce });
+    this.avatar.swapAnimation("die", { clamp: true, loop: LoopOnce });
     return;
   }
 
@@ -464,7 +468,8 @@ export class Character extends Initializable {
         level: 1,
         progression: 0,
       };
-    else characterSkill.progression += Math.max(50 - characterSkill.level * 2, 1);
+    else
+      characterSkill.progression += Math.max(50 - characterSkill.level * 2, 1);
     if (characterSkill.progression >= 100) {
       characterSkill.progression = 0;
       characterSkill.level++;
@@ -521,8 +526,8 @@ export class Character extends Initializable {
    * @returns {Number} the durability left of the weapon
    */
   degradeWeapon(damage, secondary) {
-    if (secondary) return this.equipment.get('secondary')?.degrade(damage / 10);
-    return this.equipment.get('primary')?.degrade(damage / 10);
+    if (secondary) return this.equipment.get("secondary")?.degrade(damage / 10);
+    return this.equipment.get("primary")?.degrade(damage / 10);
   }
 
   /**
@@ -530,10 +535,10 @@ export class Character extends Initializable {
    * @param {number} damage the damage to the character
    */
   distributeDamage(damage) {
-    damage -= this.equipment.get('body')?.degrade(damage) || 0;
-    damage -= this.equipment.get('helm')?.degrade(damage) || 0;
-    damage -= this.equipment.get('gloves')?.degrade(damage) || 0;
-    damage -= this.equipment.get('boots')?.degrade(damage) || 0;
+    damage -= this.equipment.get("body")?.degrade(damage) || 0;
+    damage -= this.equipment.get("helm")?.degrade(damage) || 0;
+    damage -= this.equipment.get("gloves")?.degrade(damage) || 0;
+    damage -= this.equipment.get("boots")?.degrade(damage) || 0;
     this.hp -= damage;
   }
 

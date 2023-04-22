@@ -36,6 +36,7 @@ import {
 } from "../constants/directions.js";
 import { DungeonMap } from "../services/DungeonMap.js";
 import { directionModifier } from "../utils/directionModifier.js";
+import { get, set } from "idb-keyval";
 const ACTION = {
   MOVE: "move",
   OPEN: "open",
@@ -54,10 +55,12 @@ const OPPOSING_EXITS = {
 
 class GameScreen extends LitElement {
   #canvas;
+
+  /** @type {import('../libs/three.module.js').Scene} */
   #scene;
   #camera;
   #renderer;
-  #map = new DungeonMap();
+  #map;
   #aspect;
   #directionalLight;
   #ambientLight;
@@ -66,6 +69,13 @@ class GameScreen extends LitElement {
   #mousePosition = new Vector2();
   #focalPoint = new Object3D();
   #animationCollection = new AnimationCollection();
+  #currentPath = [];
+  #highlights = [];
+
+  constructor() {
+    super();
+    this.#map = new DungeonMap(this.getAttribute("mapId") ?? undefined);
+  }
 
   static get styles() {
     return [
@@ -98,28 +108,40 @@ class GameScreen extends LitElement {
       directionalLight: this.#directionalLight,
       ambientLight: this.#ambientLight,
     } = initScene(this.#canvas));
-    const firstRoom = await this.#map.generateRoom(
-      rollDice(3, 2),
-      rollDice(3, 2),
-      rollDice(4)
-    );
-    await firstRoom.initialized;
-    const renderedRoom = await this.renderRoom(firstRoom);
-    this.#scene.add(renderedRoom);
+    if (!this.hasAttribute("mapId")) {
+      await this.#map.initialized;
+      set("current-map", this.#map.id);
+      const firstRoom = await this.#map.generateRoom(
+        rollDice(3, 2),
+        rollDice(3, 2),
+        rollDice(4)
+      );
+      await firstRoom.initialized;
+      const renderedRoom = await this.renderRoom(firstRoom);
+      this.#scene.add(renderedRoom);
 
-    this.playerCrew.leader.tile = oneOf(firstRoom?.floorTiles);
-    const entrancePosition = this.playerCrew.leader.tile.position;
-    this.playerCrew.leader.avatar.mesh.position.set(
-      entrancePosition.x,
-      0,
-      entrancePosition.z
-    );
-    this.#focalPoint.position.set(entrancePosition.x, 0, entrancePosition.z);
-    this.playerCrew.leader.avatar.mesh.scale.set(0.04, 0.04, 0.04);
-    this.#scene.add(this.playerCrew.leader.avatar.mesh);
+      const entrancePosition = oneOf(firstRoom?.floorTiles).position;
+      this.playerCrew.leader.avatar.mesh.position.set(
+        entrancePosition.x,
+        0,
+        entrancePosition.z
+      );
+      this.#focalPoint.position.set(entrancePosition.x, 0, entrancePosition.z);
+      set("focal-point", this.#focalPoint.position.toArray());
+      this.playerCrew.leader.avatar.mesh.scale.set(0.04, 0.04, 0.04);
+      this.#scene.add(this.playerCrew.leader.avatar.mesh);
+    } else {
+      console.log(this.#map.rooms);
+      this.#scene.add(await Promise.all(this.#map.rooms.map(this.renderRoom)));
+      const reloadPosition = await get("focal-point");
+      this.playerCrew.leader.avatar.mesh.position.set(...reloadPosition);
+      this.#focalPoint.position.set(...reloadPosition);
+      this.playerCrew.leader.avatar.mesh.scale.set(0.04, 0.04, 0.04);
+      this.#scene.add(this.playerCrew.leader.avatar.mesh);
+    }
+
     this.#focalPoint.add(this.#camera);
     this.#scene.add(this.#focalPoint);
-
     this.#camera.position.set(10, 10, 10);
     this.#camera.zoom = 8;
     this.#camera.lookAt(this.#focalPoint.position);
@@ -152,7 +174,7 @@ class GameScreen extends LitElement {
     box.userData = {
       type: options.type ?? TYPE.INTERACTABLE,
       action: options.action ?? ACTION.MOVE,
-      tile: floorTile
+      tile: floorTile,
     };
     if (floorTile.hasWall) {
       const walls = this.#generateWalls(floorTile);
@@ -314,14 +336,20 @@ class GameScreen extends LitElement {
   }
 
   highlightMesh(mesh) {
-    mesh.userData.materialMap =
-        mesh.material.map;
-    mesh.material.map = new CanvasTexture(
-      createTerrainSide("highlight")
-    );
+    if (!mesh) return;
+    mesh.userData.materialMap = mesh.material.map;
+    mesh.material.map = new CanvasTexture(createTerrainSide("highlight"));
+    this.#highlights.push(mesh);
   }
 
   unhighlightMesh(mesh) {
+    if (!mesh) {
+      this.#highlights.forEach((mesh) => {
+        mesh.material.map = mesh.userData.materialMap;
+      });
+      this.#highlights = [];
+      return;
+    }
     mesh.material.map = mesh.userData.materialMap;
   }
 
@@ -337,6 +365,7 @@ class GameScreen extends LitElement {
       this.#animationCollection.createMoveAnimation({
         character: this.playerCrew.leader,
         endPosition: characterEndPosition,
+        moreSteps: this.#currentPath.length > 1,
       }),
       this.#animationCollection
         .createMoveAnimation({
@@ -350,18 +379,42 @@ class GameScreen extends LitElement {
     ]);
   }
 
+  async walkItOut() {
+    if (this._walking) {
+      console.log("already walking");
+      return;
+    }
+    this._walking = true;
+    while (this.#currentPath.length > 0) {
+      const tile = this.#currentPath.shift();
+      if (!tile) break;
+      this.highlightMesh(tile.mesh);
+      await this.#movePlayerAndFocusPoint(new Vector3(tile.x, 0, tile.z));
+      this.unhighlightMesh(tile.mesh);
+    }
+    this._walking = false;
+    console.log("ending the walk");
+  }
+
   #clickHandlers = {
-    [ACTION.MOVE]: async (endMesh = this.intersectedObject.getObjectById(this.intersectedObject.id)) => {
-      const path = await this.#map.findPath(this.playerCrew.leader.avatar?.mesh?.position, endMesh.position);
+    [ACTION.MOVE]: async (
+      endMesh = this.intersectedObject.getObjectById(this.intersectedObject.id)
+    ) => {
+      if (this.#currentPath.length) this.#currentPath = [this.#currentPath[0]];
+      this.#currentPath = [
+        ...this.#currentPath,
+        ...(await this.#map.findPath(
+          this.#currentPath[0] ?? this.playerCrew.leader.avatar?.mesh?.position,
+          endMesh.position
+        )),
+      ];
       this.unhighlightMesh(endMesh);
-      for(const tile of path) {
-        this.highlightMesh(tile.mesh);
-        await this.#movePlayerAndFocusPoint(new Vector3(tile.position.x, 0, tile.position.z));
-        this.unhighlightMesh(tile.mesh);
-      }
+      this.walkItOut();
     },
     [ACTION.OPEN]: async () => {
-      const object = this.intersectedObject.getObjectById(this.intersectedObject.id);
+      const object = this.intersectedObject.getObjectById(
+        this.intersectedObject.id
+      );
       await this.#clickHandlers[ACTION.MOVE](object.parent);
       const { mesh } = await this.#animationCollection.createMoveAnimation({
         mesh: object,

@@ -20,11 +20,11 @@ import { oneOf } from "../utils/oneOf.js";
 
 export class DungeonMap extends IdbBacked {
   /** @type {Array.<Room>} */
-  #rooms = [];
   constructor(id = crypto.randomUUID(), terrain = "rock") {
     super(id);
     this.id = id;
     this.terrain = terrain;
+    this.rooms = [];
   }
 
   static get serialized() {
@@ -34,12 +34,8 @@ export class DungeonMap extends IdbBacked {
     };
   }
 
-  get rooms() {
-    return this.#rooms;
-  }
-
   get floorTiles() {
-    return this.#rooms.flatMap((room) => room.floorTiles);
+    return this.rooms.flatMap((room) => room.floorTiles);
   }
 
   /**
@@ -104,7 +100,7 @@ export class DungeonMap extends IdbBacked {
    * @returns {boolean} true if the room overlaps with any other room
    */
   #roomOverlaps(room) {
-    return this.#rooms.some((exisitingRoom) =>
+    return this.rooms.some((exisitingRoom) =>
       exisitingRoom.floorTiles.some((exisitingFloorTile) =>
         room.floorTiles.some((floorTile) =>
           floorTile.at(exisitingFloorTile.x, exisitingFloorTile.z)
@@ -156,7 +152,7 @@ export class DungeonMap extends IdbBacked {
       },
       width,
       length,
-      path: entrance.room?.path
+      path: entrance.room?.path,
     };
     let room = new Room(undefined, this.id, roomDetails);
     await room.initialized;
@@ -179,12 +175,12 @@ export class DungeonMap extends IdbBacked {
       OPPOSITE_DIRECTION[entrance.exitDirection],
       exits
     );
-    this.#rooms.push(room);
+    this.rooms.push(room);
     return room;
   }
 
   /**
-   * 
+   *
    * @param {Vector3} position the position of the tile to find
    * @returns {FloorTile|undefined}
    */
@@ -201,28 +197,48 @@ export class DungeonMap extends IdbBacked {
   async findPath(startTilePosition, endTilePosition) {
     const startTile = this.#getTileAtPosition(startTilePosition);
     const endTile = this.#getTileAtPosition(endTilePosition);
-    if(!startTile) throw new Error(`no tile found at start position, ${startTilePosition}`)
-    if(!endTile) throw new Error(`no tile found at start position, ${endTilePosition}`)
+    if (!startTile)
+      throw new Error(`no tile found at start position, ${startTilePosition}`);
+    if (!endTile)
+      throw new Error(`no tile found at start position, ${endTilePosition}`);
     const startRoom = startTile.room;
     const endRoom = endTile.room;
     if (startRoom === endRoom) {
       return startRoom.findPath(startTile, endTile);
     }
-    const firstIntersection = startRoom.path.findLast(room => endRoom.path.includes(room));
-    const startPathReversed = startRoom.path.slice(startRoom.path.indexOf(firstIntersection)).reverse();
-    const roomPath = Array.from(new Set([...startPathReversed, ...endRoom.path.slice(endRoom.path.indexOf(firstIntersection))]));
+    const firstIntersection = startRoom.path.findLast((room) =>
+      endRoom.path.includes(room)
+    );
+    const startPathReversed = startRoom.path
+      .slice(startRoom.path.indexOf(firstIntersection))
+      .reverse();
+    const roomPath = Array.from(
+      new Set([
+        ...startPathReversed,
+        ...endRoom.path.slice(endRoom.path.indexOf(firstIntersection)),
+      ])
+    );
     const path = [];
     let currentTile = startTile;
     do {
       const currentRoom = roomPath.shift();
       const nextRoom = roomPath[0];
-      const currentRoomExit = currentRoom.exploredExitTiles.find(tile => [tile.toRoom, tile.fromRoom].includes(nextRoom));
-      const nextRoomEntrance = nextRoom?.exploredExitTiles?.find?.(tile => [tile.toRoom, tile.fromRoom].includes(currentRoom));
-      const roomPathTiles = await currentRoom.findPath(currentTile, currentRoomExit ?? endTile);
+      const currentRoomExit = currentRoom.exploredExitTiles.find((tile) =>
+        [tile.toRoom, tile.fromRoom].includes(nextRoom)
+      );
+      const nextRoomEntrance = nextRoom?.exploredExitTiles?.find?.((tile) =>
+        [tile.toRoom, tile.fromRoom].includes(currentRoom)
+      );
+      const roomPathTiles = await currentRoom.findPath(
+        currentTile,
+        currentRoomExit ?? endTile
+      );
       currentTile = nextRoomEntrance;
       path.push(...roomPathTiles, nextRoomEntrance);
-    } while(roomPath.length > 0);
-    return [...path, endTile].filter(Boolean);
+    } while (roomPath.length > 0);
+    return [...path, endTile]
+      .filter(Boolean)
+      .map((tile) => tile?.position ?? tile);
   }
 }
 

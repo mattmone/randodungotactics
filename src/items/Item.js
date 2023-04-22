@@ -1,9 +1,9 @@
-import { rollDice } from '../utils/rollDice.js';
-import { get, set, createStore, del } from '../libs/idb-keyval.js';
-import { Initializable } from '../utils/baseClasses/Initializable.js';
+import { rollDice } from "../utils/rollDice.js";
+import { get, set, createStore, del } from "idb-keyval";
+import { Initializable } from "../utils/baseClasses/Initializable.js";
 
 /** @type {IDBObjectStore} */
-const idbStore = createStore('items', 'itemStore');
+const idbStore = createStore("items", "itemStore");
 
 export class Item extends Initializable {
   /** @type {Timeout} */
@@ -16,7 +16,10 @@ export class Item extends Initializable {
    */
   constructor(itemParamsRaw) {
     super();
-    const itemParams = { ...{ power: 1, strength: 1, effects: new Map() }, ...itemParamsRaw };
+    const itemParams = {
+      ...{ power: 1, strength: 1, effects: new Map() },
+      ...itemParamsRaw,
+    };
     if (itemParams.id) {
       this.id = itemParams.id;
       this.hydrate(itemParams.id);
@@ -26,13 +29,14 @@ export class Item extends Initializable {
   }
 
   static async #build(item) {
-    const [{ Weapon }, { Body }, { Hands }, { Head }, { Boots }] = await Promise.all([
-      import('../items/Weapon.js'),
-      import('../items/Body.js'),
-      import('../items/Hands.js'),
-      import('../items/Head.js'),
-      import('../items/Boots.js'),
-    ]);
+    const [{ Weapon }, { Body }, { Hands }, { Head }, { Boots }] =
+      await Promise.all([
+        import("../items/Weapon.js"),
+        import("../items/Body.js"),
+        import("../items/Hands.js"),
+        import("../items/Head.js"),
+        import("../items/Boots.js"),
+      ]);
     const type = {
       Weapon: Weapon,
       Body: Body,
@@ -66,7 +70,7 @@ export class Item extends Initializable {
       gems = new Map(),
       created = new Date(),
     },
-    skipSave,
+    skipSave
   ) {
     /** @type {String} */
     this.name = name;
@@ -121,7 +125,8 @@ export class Item extends Initializable {
    */
   degrade(damage) {
     if (this.durability <= 0) return 0;
-    const soak = rollDice(this.power, this.strength) + (this.modifier?.soak || 0);
+    const soak =
+      rollDice(this.power, this.strength) + (this.modifier?.soak || 0);
     this.durability -= soak;
     return soak;
   }

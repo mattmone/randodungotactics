@@ -15,10 +15,11 @@ export class Room extends IdbBacked {
    */
   constructor(id = crypto.randomUUID(), mapid, roomDetails) {
     super(id);
-    const { x, z, width, length, entrance, path=[] } = roomDetails;
+    const { x, z, width, length, entrance, path = [] } = roomDetails;
     this.mapid = mapid;
-    this.path = [...path, this]
+    this.path = [...path, this];
     const floorTileCoordinates = [];
+    this.explored = false;
 
     this.#wall.set(DIRECTION.NORTH, z - length);
     this.#wall.set(DIRECTION.SOUTH, z + length);
@@ -38,7 +39,7 @@ export class Room extends IdbBacked {
           southWall,
           westWall,
           eastWall,
-          room: this
+          room: this,
         });
       }
     }
@@ -46,7 +47,10 @@ export class Room extends IdbBacked {
     Promise.all(floorTileCoordinates.map(this.generateFloorTile)).then(
       (floorTiles) => {
         if (floorTiles.length === 1) {
-          entrance.tile.makeEntrance(OPPOSITE_DIRECTION[entrance.direction], entrance?.tile.fromRoom);
+          entrance.tile.makeEntrance(
+            OPPOSITE_DIRECTION[entrance.direction],
+            entrance?.tile.fromRoom
+          );
         }
         this.floorTiles = floorTiles;
         this.hallway = entrance;
@@ -70,9 +74,11 @@ export class Room extends IdbBacked {
 
   static get serialized() {
     return {
-      mapid: true,
-      walls: true,
+      explored: true,
       floorTiles: IdbBacked.Array(FloorTile),
+      mapid: true,
+      path: IdbBacked.Array(Room),
+      walls: true,
     };
   }
 
@@ -108,7 +114,11 @@ export class Room extends IdbBacked {
   }
 
   get exploredExitTiles() {
-    return this.floorTiles.filter((tile) => (tile.isExit && tile.toRoom) || (tile.isEntrance && tile.fromRoom));
+    return this.floorTiles.filter(
+      (tile) =>
+        (tile.isExit && tile.toRoom?.explored) ||
+        (tile.isEntrance && tile.fromRoom)
+    );
   }
 
   /**
@@ -122,20 +132,40 @@ export class Room extends IdbBacked {
   }
 
   async findPath(startTile, endTile) {
-    const { oneOf } = await import('../utils/oneOf.js');
-    const {x: startX, z: startZ} = startTile.position;
-    const {x: endX, z: endZ} = endTile.position;
-    const pathPossibilities = ['northSouth', 'eastWest'];
+    const { oneOf } = await import("../utils/oneOf.js");
+    const { x: startX, z: startZ } = startTile.position;
+    const { x: endX, z: endZ } = endTile.position;
+    const pathPossibilities = ["northSouth", "eastWest"];
     const firstPath = oneOf(pathPossibilities);
-    if(firstPath === 'northSouth') {
-      const intermediaryTile = this.floorTiles.find(tile => tile.at(startX, endZ));
-      console.log('intermediary north-south tile', startX, endZ, intermediaryTile);
-      return [intermediaryTile, endTile];
+    const path = [];
+    if (firstPath === "northSouth") {
+      let step = move(
+        startTile.position,
+        startZ < endZ ? DIRECTION.SOUTH : DIRECTION.NORTH
+      );
+      while (step.z !== endZ) {
+        path.push(step);
+        step = move(step, step.z < endZ ? DIRECTION.SOUTH : DIRECTION.NORTH);
+      }
+      while (step.x > endX || step.x < endX) {
+        path.push(step);
+        step = move(step, step.x < endX ? DIRECTION.EAST : DIRECTION.WEST);
+      }
     } else {
-      const intermediaryTile = this.floorTiles.find(tile => tile.at(endX, startZ));
-      console.log('intermediary east-west tile', endX, startZ, intermediaryTile);
-      return [intermediaryTile, endTile];
+      let step = move(
+        startTile.position,
+        startX < endX ? DIRECTION.EAST : DIRECTION.WEST
+      );
+      while (step.x > endX || step.x < endX) {
+        path.push(step);
+        step = move(step, step.x < endX ? DIRECTION.EAST : DIRECTION.WEST);
+      }
+      while (step.z > endZ || step.z < endZ) {
+        path.push(step);
+        step = move(step, step.z < endZ ? DIRECTION.SOUTH : DIRECTION.NORTH);
+      }
     }
+    return [...path, endTile.position].filter(Boolean);
   }
 }
 
