@@ -1,5 +1,6 @@
 import { DIRECTION, OPPOSITE_DIRECTION } from "../constants/directions";
 import { IdbBacked } from "../utils/baseClasses/IdbBacked";
+import { Room } from "./Room.js";
 
 /**
  * @typedef {import('../../types').TileDetails} TileDetails
@@ -15,6 +16,7 @@ export class FloorTile extends IdbBacked {
    */
   constructor(id = crypto.randomUUID(), tileDetails) {
     super(id);
+    if (!tileDetails) return;
     this.x = tileDetails.x;
     this.z = tileDetails.z;
     this.northWall = tileDetails.northWall ?? false;
@@ -42,6 +44,28 @@ export class FloorTile extends IdbBacked {
       type: true,
       exitDirection: true,
       entranceDirection: true,
+      room: IdbBacked.Instance(Room),
+      fromRoom: IdbBacked.Instance(Room),
+      toRoom: IdbBacked.Instance(Room),
+    };
+  }
+
+  get threadPassable() {
+    return {
+      id: this.id,
+      terrain: this.terrain,
+      x: this.x,
+      z: this.z,
+      hasWall: this.hasWall,
+      isExit: this.isExit,
+      wallDirections: this.wallDirections,
+      position: this.position,
+      northSouthWall: this.northSouthWall,
+      eastWestWall: this.eastWestWall,
+      isEntrance: this.isEntrance,
+      isCorner: this.isCorner,
+      exitDirection: this.exitDirection,
+      northSouthExit: this.northSouthExit,
     };
   }
 
@@ -143,8 +167,10 @@ export class FloorTile extends IdbBacked {
   /**
    *
    * @param {DIRECTION} entranceDirection
+   * @param {Room} fromRoom
    */
   makeEntrance(entranceDirection, fromRoom) {
+    console.error("makeEntrance", entranceDirection, fromRoom);
     this.type = "entrance";
     this.entranceDirection = entranceDirection;
     this.fromRoom = fromRoom;

@@ -108,8 +108,8 @@ class GameScreen extends LitElement {
       directionalLight: this.#directionalLight,
       ambientLight: this.#ambientLight,
     } = initScene(this.#canvas));
+    await this.#map.initialized;
     if (!this.hasAttribute("mapId")) {
-      await this.#map.initialized;
       set("current-map", this.#map.id);
       const firstRoom = await this.#map.generateRoom(
         rollDice(3, 2),
@@ -131,8 +131,10 @@ class GameScreen extends LitElement {
       this.playerCrew.leader.avatar.mesh.scale.set(0.04, 0.04, 0.04);
       this.#scene.add(this.playerCrew.leader.avatar.mesh);
     } else {
-      console.log(this.#map.rooms);
-      this.#scene.add(await Promise.all(this.#map.rooms.map(this.renderRoom)));
+      const rooms = await Promise.all(
+        this.#map.rooms.map((room) => this.renderRoom(room))
+      );
+      this.#scene.add(...rooms);
       const reloadPosition = await get("focal-point");
       this.playerCrew.leader.avatar.mesh.position.set(...reloadPosition);
       this.#focalPoint.position.set(...reloadPosition);
@@ -275,6 +277,7 @@ class GameScreen extends LitElement {
    * @returns {Group} the rooms meshes in a Group
    */
   async renderRoom(room) {
+    this.#map.exploreRoom(room.id);
     const group = new Group();
     if (room.hallway) {
       group.add(this.#generateFloorBox(room.hallway.tile));

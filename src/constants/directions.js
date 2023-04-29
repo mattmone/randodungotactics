@@ -23,3 +23,4 @@ export function isNorthSouth(direction) {
 export function isEastWest(direction) {
   return [DIRECTION.EAST, DIRECTION.WEST].includes(direction);
 }
+  

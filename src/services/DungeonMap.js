@@ -19,23 +19,27 @@ import { oneOf } from "../utils/oneOf.js";
  */
 
 export class DungeonMap extends IdbBacked {
-  /** @type {Array.<Room>} */
   constructor(id = crypto.randomUUID(), terrain = "rock") {
     super(id);
     this.id = id;
     this.terrain = terrain;
-    this.rooms = [];
+    /** @type {Array.<Room>} */
+    this._rooms = [];
   }
 
   static get serialized() {
     return {
-      rooms: IdbBacked.Array(Room),
+      _rooms: IdbBacked.Array(Room),
       terrain: true,
     };
   }
 
+  get rooms() {
+    return this._rooms.map((room) => room.threadPassable);
+  }
+
   get floorTiles() {
-    return this.rooms.flatMap((room) => room.floorTiles);
+    return this._rooms.flatMap((room) => room.floorTiles);
   }
 
   /**
@@ -100,7 +104,7 @@ export class DungeonMap extends IdbBacked {
    * @returns {boolean} true if the room overlaps with any other room
    */
   #roomOverlaps(room) {
-    return this.rooms.some((exisitingRoom) =>
+    return this._rooms.some((exisitingRoom) =>
       exisitingRoom.floorTiles.some((exisitingFloorTile) =>
         room.floorTiles.some((floorTile) =>
           floorTile.at(exisitingFloorTile.x, exisitingFloorTile.z)
@@ -175,8 +179,8 @@ export class DungeonMap extends IdbBacked {
       OPPOSITE_DIRECTION[entrance.exitDirection],
       exits
     );
-    this.rooms.push(room);
-    return room;
+    this._rooms.push(room);
+    return room.threadPassable;
   }
 
   /**
@@ -203,7 +207,7 @@ export class DungeonMap extends IdbBacked {
       throw new Error(`no tile found at start position, ${endTilePosition}`);
     const startRoom = startTile.room;
     const endRoom = endTile.room;
-    if (startRoom === endRoom) {
+    if (startRoom.id === endRoom.id) {
       return startRoom.findPath(startTile, endTile);
     }
     const firstIntersection = startRoom.path.findLast((room) =>
@@ -221,8 +225,8 @@ export class DungeonMap extends IdbBacked {
     const path = [];
     let currentTile = startTile;
     do {
-      const currentRoom = roomPath.shift();
-      const nextRoom = roomPath[0];
+      const currentRoom = this._rooms.find(({id}) => id === roomPath.shift());
+      const nextRoom = this._rooms.find(({id}) => id === roomPath[0]);
       const currentRoomExit = currentRoom.exploredExitTiles.find((tile) =>
         [tile.toRoom, tile.fromRoom].includes(nextRoom)
       );
@@ -239,6 +243,12 @@ export class DungeonMap extends IdbBacked {
     return [...path, endTile]
       .filter(Boolean)
       .map((tile) => tile?.position ?? tile);
+  }
+
+  async exploreRoom(roomId) {
+    const room = this._rooms.find((room) => room.id === roomId);
+    if (!room) throw new Error(`no room found with id ${roomId}`);
+    room.explored = true;
   }
 }
 

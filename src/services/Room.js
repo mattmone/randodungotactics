@@ -4,7 +4,6 @@ import { IdbBacked } from "../utils/baseClasses/IdbBacked.js";
 import { FloorTile } from "./FloorTile.js";
 
 export class Room extends IdbBacked {
-  #wall = new Map();
   #wallTiles = new Map();
 
   /**
@@ -15,16 +14,18 @@ export class Room extends IdbBacked {
    */
   constructor(id = crypto.randomUUID(), mapid, roomDetails) {
     super(id);
+    if (!roomDetails) return;
     const { x, z, width, length, entrance, path = [] } = roomDetails;
     this.mapid = mapid;
-    this.path = [...path, this];
+    this.path = [...path, this.id];
     const floorTileCoordinates = [];
     this.explored = false;
 
-    this.#wall.set(DIRECTION.NORTH, z - length);
-    this.#wall.set(DIRECTION.SOUTH, z + length);
-    this.#wall.set(DIRECTION.EAST, x + width);
-    this.#wall.set(DIRECTION.WEST, x - width);
+    this.wall = new Map();
+    this.wall.set(DIRECTION.NORTH, z - length);
+    this.wall.set(DIRECTION.SOUTH, z + length);
+    this.wall.set(DIRECTION.EAST, x + width);
+    this.wall.set(DIRECTION.WEST, x - width);
 
     for (let w = -width; w <= width; w++) {
       const westWall = w === -width;
@@ -62,6 +63,7 @@ export class Room extends IdbBacked {
           tile.at(entrancePosition?.x, entrancePosition?.z)
         );
         if (entranceTile) {
+          console.log("entrance", entrance);
           entranceTile.makeEntrance(
             OPPOSITE_DIRECTION[entrance.direction],
             entrance?.tile.fromRoom
@@ -79,6 +81,7 @@ export class Room extends IdbBacked {
       mapid: true,
       path: IdbBacked.Array(Room),
       walls: true,
+      wall: true,
     };
   }
 
@@ -97,7 +100,7 @@ export class Room extends IdbBacked {
       (tile) =>
         tile[
           [DIRECTION.NORTH, DIRECTION.SOUTH].includes(direction) ? "z" : "x"
-        ] === this.#wall.get(direction)
+        ] === this.wall.get(direction)
     );
     // Cache the computed wall tiles for the given direction
     this.#wallTiles.set(direction, wallTiles);
@@ -106,10 +109,21 @@ export class Room extends IdbBacked {
 
   get allWalls() {
     return {
-      north: this.#wall.get(DIRECTION.NORTH),
-      south: this.#wall.get(DIRECTION.SOUTH),
-      east: this.#wall.get(DIRECTION.EAST),
-      west: this.#wall.get(DIRECTION.WEST),
+      north: this.wall.get(DIRECTION.NORTH),
+      south: this.wall.get(DIRECTION.SOUTH),
+      east: this.wall.get(DIRECTION.EAST),
+      west: this.wall.get(DIRECTION.WEST),
+    };
+  }
+
+  get threadPassable() {
+    return {
+      id: this.id,
+      hallway: {
+        tile: this.hallway?.tile?.threadPassable,
+      },
+      floorTiles: this.floorTiles.map((tile) => tile.threadPassable),
+      exploredExitTiles: this.exploredExitTiles,
     };
   }
 

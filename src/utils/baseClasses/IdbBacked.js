@@ -38,19 +38,21 @@ export class IdbBacked extends Initializable {
        * @param {any} propDetails the details of the property to be backed by idb
        * @returns
        */
-      deserialize: async (instance, property, propDetails) =>
-        !propDetails ? [] : await Promise.all(
-          propDetails
-            .map(
-              /**
-               *
-               * @param {string} propid the id of the property backed by idb
-               * @returns {IdbBacked} an instance of an IdbBacked class
-               */
-              (propid) => new ExtendedIdbBackedClass(propid)
-            )
-            .map((item) => item.initialized)
-        ),
+      deserialize: async (instance, property, propDetails) => {
+        const deserializedArray = propDetails.map(
+          /**
+           *
+           * @param {string} propid the id of the property backed by idb
+           * @returns {IdbBacked} an instance of an IdbBacked class
+           */
+          (propid) => new ExtendedIdbBackedClass(propid)
+        );
+        return !propDetails
+          ? []
+          : await Promise.all(
+              deserializedArray.map((item) => item.initialized)
+            );
+      },
       destroy: (instance, property) =>
         instance[property].forEach((prop) =>
           prop.dispatchEvent(new Event("destroy"))
@@ -74,6 +76,18 @@ export class IdbBacked extends Initializable {
         instance[property].forEach((prop) =>
           prop.dispatchEvent(new Event("destroy"))
         ),
+    };
+  }
+
+  static Instance(ExtendedIdbBackedClass) {
+    return {
+      serialize: (instance, property) => instance[property].id,
+      deserialize: async (instance, property, propDetails) => {
+        const rehydrateInstance = new ExtendedIdbBackedClass(propDetails);
+        return await rehydrateInstance.initialized;
+      },
+      destroy: (instance, property) =>
+        instance[property].dispatchEvent(new Event("destroy")),
     };
   }
 
@@ -201,10 +215,9 @@ export class IdbBacked extends Initializable {
 
   //#region Public Methods
   async deserialize(details) {
-    console.log('deserializing', details)
     if (!details) return;
     const properties = this.#serializableKeys;
-    
+
     for (let property of properties) {
       if (
         this.#serializableProperties[property]?.deserialize &&
