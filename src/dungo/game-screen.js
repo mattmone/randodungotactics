@@ -117,6 +117,7 @@ class GameScreen extends LitElement {
         rollDice(4)
       );
       await firstRoom.initialized;
+      this.#map.exploreRoom(firstRoom.id);
       const renderedRoom = await this.renderRoom(firstRoom);
       this.#scene.add(renderedRoom);
 
@@ -132,7 +133,7 @@ class GameScreen extends LitElement {
       this.#scene.add(this.playerCrew.leader.avatar.mesh);
     } else {
       const rooms = await Promise.all(
-        this.#map.rooms.map((room) => this.renderRoom(room))
+        this.#map.exploredRooms.map((room) => this.renderRoom(room))
       );
       this.#scene.add(...rooms);
       const reloadPosition = await get("focal-point");
@@ -176,7 +177,7 @@ class GameScreen extends LitElement {
     box.userData = {
       type: options.type ?? TYPE.INTERACTABLE,
       action: options.action ?? ACTION.MOVE,
-      tile: floorTile,
+      tile: floorTile
     };
     if (floorTile.hasWall) {
       const walls = this.#generateWalls(floorTile);
@@ -186,7 +187,6 @@ class GameScreen extends LitElement {
       const exit = this.#generateExit(floorTile, options);
       box.add(exit);
     }
-    floorTile.mesh = box;
     return box;
   }
 
@@ -277,10 +277,9 @@ class GameScreen extends LitElement {
    * @returns {Group} the rooms meshes in a Group
    */
   async renderRoom(room) {
-    this.#map.exploreRoom(room.id);
     const group = new Group();
     if (room.hallway) {
-      group.add(this.#generateFloorBox(room.hallway.tile));
+      group.add(this.#generateFloorBox(room.hallway));
     }
     room.floorTiles.forEach((floorTile) => {
       group.add(this.#generateFloorBox(floorTile));
@@ -418,23 +417,20 @@ class GameScreen extends LitElement {
       const object = this.intersectedObject.getObjectById(
         this.intersectedObject.id
       );
-      await this.#clickHandlers[ACTION.MOVE](object.parent);
+      const floorMesh = object.parent;
+      await this.#clickHandlers[ACTION.MOVE](floorMesh);
       const { mesh } = await this.#animationCollection.createMoveAnimation({
         mesh: object,
         endPointVector: object.position.clone().setY(0),
         faceEndPoint: false,
       });
-      mesh.parent.userData.type = TYPE.INTERACTABLE;
+      floorMesh.userData.type = TYPE.INTERACTABLE;
       mesh.removeFromParent();
-      const roomWidth = rollDice(3, 2);
-      const roomLength = rollDice(3, 2);
 
-      const room = await this.#map.generateRoom(
-        roomWidth,
-        roomLength,
-        rollDice(3),
-        mesh.userData.tile
-      );
+      console.log(floorMesh.userData.tile.room)
+
+      const room = await this.#map.exploreRoom(floorMesh.userData.tile.room);
+      console.log(room);
       const renderedRoom = await this.renderRoom(room);
 
       this.#scene.add(renderedRoom);

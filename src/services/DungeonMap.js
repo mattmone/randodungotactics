@@ -42,6 +42,10 @@ export class DungeonMap extends IdbBacked {
     return this._rooms.flatMap((room) => room.floorTiles);
   }
 
+  get exploredRooms() {
+    return this._rooms.filter((room) => room.explored);
+  }
+
   /**
    *
    * @param {Position} position
@@ -92,6 +96,7 @@ export class DungeonMap extends IdbBacked {
         this.#checkForNearbyRoom(exitTile, wall.direction)
       )
         continue;
+      console.log("make exit", exitTile, wall.direction);
       exitTile.makeExit(wall.direction);
       walls.splice(walls.indexOf(wall), 1);
       count--;
@@ -119,7 +124,7 @@ export class DungeonMap extends IdbBacked {
    * @param length - number of tiles in the room, in the z direction
    * @param exits - number of exits from the room
    * @param {FloorTile} entrance - entrance point to the room
-   * @return {Promise<Room|null>} - the room that was generated
+   * @return {Promise<Room>} - the room that was generated
    */
 
   async generateRoom(
@@ -156,7 +161,7 @@ export class DungeonMap extends IdbBacked {
       },
       width,
       length,
-      path: entrance.room?.path,
+      path: entrance.room?.path ?? [],
     };
     let room = new Room(undefined, this.id, roomDetails);
     await room.initialized;
@@ -210,6 +215,7 @@ export class DungeonMap extends IdbBacked {
     if (startRoom.id === endRoom.id) {
       return startRoom.findPath(startTile, endTile);
     }
+    console.log(startRoom.path, endRoom.path);
     const firstIntersection = startRoom.path.findLast((room) =>
       endRoom.path.includes(room)
     );
@@ -225,8 +231,8 @@ export class DungeonMap extends IdbBacked {
     const path = [];
     let currentTile = startTile;
     do {
-      const currentRoom = this._rooms.find(({id}) => id === roomPath.shift());
-      const nextRoom = this._rooms.find(({id}) => id === roomPath[0]);
+      const currentRoom = this._rooms.find(({ id }) => id === roomPath.shift());
+      const nextRoom = this._rooms.find(({ id }) => id === roomPath[0]);
       const currentRoomExit = currentRoom.exploredExitTiles.find((tile) =>
         [tile.toRoom, tile.fromRoom].includes(nextRoom)
       );
@@ -249,6 +255,15 @@ export class DungeonMap extends IdbBacked {
     const room = this._rooms.find((room) => room.id === roomId);
     if (!room) throw new Error(`no room found with id ${roomId}`);
     room.explored = true;
+    // room.exitTiles.forEach(exit => {
+    //   this.generateRoom(
+    //     rollDice(3, 2),
+    //     rollDice(3, 2),
+    //     rollDice(3),
+    //     exit
+    //   );
+    // })
+    return room.threadPassable;
   }
 }
 

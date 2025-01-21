@@ -54,7 +54,7 @@ export class Room extends IdbBacked {
           );
         }
         this.floorTiles = floorTiles;
-        this.hallway = entrance;
+        this.hallway = entrance.tile;
         const entrancePosition = move(
           entrance.tile.position,
           entrance.direction
@@ -79,9 +79,10 @@ export class Room extends IdbBacked {
       explored: true,
       floorTiles: IdbBacked.Array(FloorTile),
       mapid: true,
-      path: IdbBacked.Array(Room),
+      path: true,
       walls: true,
       wall: true,
+      hallway: IdbBacked.Instance(FloorTile)
     };
   }
 
@@ -119,12 +120,15 @@ export class Room extends IdbBacked {
   get threadPassable() {
     return {
       id: this.id,
-      hallway: {
-        tile: this.hallway?.tile?.threadPassable,
-      },
+      hallway: this.hallway?.tile?.threadPassable,
       floorTiles: this.floorTiles.map((tile) => tile.threadPassable),
       exploredExitTiles: this.exploredExitTiles,
+      path: this.path
     };
+  }
+
+  get exitTiles() {
+    return this.floorTiles.filter((tile) => tile.isExit)
   }
 
   get exploredExitTiles() {

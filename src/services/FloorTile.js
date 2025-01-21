@@ -66,6 +66,7 @@ export class FloorTile extends IdbBacked {
       isCorner: this.isCorner,
       exitDirection: this.exitDirection,
       northSouthExit: this.northSouthExit,
+      room: this.room.id
     };
   }
 
@@ -170,9 +171,9 @@ export class FloorTile extends IdbBacked {
    * @param {Room} fromRoom
    */
   makeEntrance(entranceDirection, fromRoom) {
-    console.error("makeEntrance", entranceDirection, fromRoom);
     this.type = "entrance";
     this.entranceDirection = entranceDirection;
     this.fromRoom = fromRoom;
+    console.error('entrance', this)
   }
 }

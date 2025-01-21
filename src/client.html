@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>client example</title>
+    <script type="module">
+      navigator.serviceWorker.register("./sw.js");
+      import { Service } from "./Service.js";
+      const clientService = new Service("service", true);
+      console.log('clientService', clientService);
+      document.querySelector("#request").addEventListener("click", () => {
+        document.querySelector("#secret").innerText = clientService.secretProp;
+      });
+    </script>
+    <style>
+      html,
+      body,
+      #secret {
+        margin: 0;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="secret"></div>
+    <button id="request">request host secret</button>
+  </body>
+</html>
